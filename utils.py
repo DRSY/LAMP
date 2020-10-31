@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-10-30 22:18:56
-LastEditTime: 2020-10-31 11:24:32
+LastEditTime: 2020-10-31 14:24:08
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/utils.py
@@ -47,20 +47,39 @@ def Foobar_pruning(module, name):
     return module
 
 def remove_prune_reparametrization(module, name):
+    """
+    make pruning permanent
+    """
     prune.remove(module, name)
 
 
-def bernoulli_sampler(probs):
+def bernoulli_hard_sampler(probs):
+    """
+    Hard sampler for bernoulli distribution
+    """
     Bernoulli_Sampler = Bernoulli(probs=probs)
     sample = Bernoulli_Sampler.sample()
     log_probs_of_sample = Bernoulli_Sampler.log_prob(sample)
     return sample, log_probs_of_sample
 
+
+def bernoulli_soft_sampler(logits, temperature: float = 0.1):
+    """
+    Soft sampler for bernoulli distribution
+    """
+    uniform_variables = torch.rand(*logits.size())
+    assert uniform_variables.shape == logits.shape
+    samples = torch.sigmoid((logits + torch.log(uniform_variables) - torch.log(1-uniform_variables)) / temperature)
+    return samples
+
 if __name__ == "__main__":
-    model = nn.Sequential(nn.Linear(32,100), nn.ReLU(), nn.Linear(100, 200), nn.Sigmoid())
+    model = nn.Sequential(nn.Linear(32,100), nn.ReLU(), nn.Linear(100, 200))
     model.train()
     inputs = torch.randn(16, 32)
-    pruning_mask_probs = model(inputs)
-    assert pruning_mask_probs.requires_grad == True
-    samples, log_probs_of_samples = bernoulli_sampler(probs=pruning_mask_probs)
-    print(log_probs_of_samples)
+    pruning_mask_logits = model(inputs)
+    assert pruning_mask_logits.requires_grad == True
+    pruning_mask_probs = torch.sigmoid(pruning_mask_logits)
+    soft_samples = bernoulli_soft_sampler(pruning_mask_logits, temperature=0.1)
+    hard_samples, log_probs = bernoulli_hard_sampler(pruning_mask_probs)
+    print(soft_samples.shape)
+    print(soft_samples)

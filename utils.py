@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-10-30 22:18:56
-LastEditTime: 2020-10-30 22:21:40
+LastEditTime: 2020-10-31 11:24:32
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/utils.py
@@ -9,6 +9,7 @@ FilePath: /LAMA/utils.py
 import torch
 import torch.nn as nn
 import torch.nn.utils.prune as prune
+from torch.distributions import Bernoulli
 
 device = torch.device("cuda:3")
 print(device)
@@ -47,3 +48,19 @@ def Foobar_pruning(module, name):
 
 def remove_prune_reparametrization(module, name):
     prune.remove(module, name)
+
+
+def bernoulli_sampler(probs):
+    Bernoulli_Sampler = Bernoulli(probs=probs)
+    sample = Bernoulli_Sampler.sample()
+    log_probs_of_sample = Bernoulli_Sampler.log_prob(sample)
+    return sample, log_probs_of_sample
+
+if __name__ == "__main__":
+    model = nn.Sequential(nn.Linear(32,100), nn.ReLU(), nn.Linear(100, 200), nn.Sigmoid())
+    model.train()
+    inputs = torch.randn(16, 32)
+    pruning_mask_probs = model(inputs)
+    assert pruning_mask_probs.requires_grad == True
+    samples, log_probs_of_samples = bernoulli_sampler(probs=pruning_mask_probs)
+    print(log_probs_of_samples)

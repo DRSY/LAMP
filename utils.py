@@ -1,17 +1,19 @@
 '''
 Author: roy
 Date: 2020-10-30 22:18:56
-LastEditTime: 2020-10-31 20:43:23
+LastEditTime: 2020-11-01 11:04:04
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/utils.py
 '''
+from transformers import BertForMaskedLM, BertTokenizer
+import copy
 import torch
 import torch.nn as nn
 import torch.nn.utils.prune as prune
 from torch.distributions import Bernoulli
 
-device = torch.device("cuda:3")
+device = torch.device("cpu")
 print(device)
 
 
@@ -44,8 +46,6 @@ def Foobar_pruning(module, name, mask):
     shape = sub_module.size()
     assert shape == mask.size(
     ), "size of mask and parameters not consistent: {} != {}".format(mask.size(), shape)
-    random_mask = torch.bernoulli(torch.empty(
-        *shape).uniform_(0, 1)).float().to(device)
     FoobarPruning.apply(module, name, pregenerated_mask=mask)
     return module
 
@@ -56,8 +56,17 @@ def remove_prune_reparametrization(module, name):
     """
     prune.remove(module, name)
 
+def restore_init_state(model: torch.nn.Module, init_state):
+    """
+    load copyed initial state dict after prune.remove
+    """
+    model.load_state_dict(init_state)
+
 
 def freeze_parameters(model):
+    """
+    freeze all parameters of input model
+    """
     for p in model.parameters():
         p.requires_grad = False
 
@@ -82,6 +91,19 @@ def bernoulli_soft_sampler(logits, temperature: float = 0.1):
         (logits + torch.log(uniform_variables) - torch.log(1-uniform_variables)) / temperature)
     return samples
 
+def LAMA(model, tokenizer, input_w_mask, topk=5):
+    inputs = tokenizer(input_w_mask, return_tensors='pt')
+    mask_id = inputs['input_ids'][0].tolist().index(tokenizer.mask_token_id)
+    inputs.to(device)
+    outputs = model(**inputs)
+    logits = outputs.logits
+    probs = torch.softmax(logits[0, mask_id], dim=-1)
+    _, indices = torch.topk(probs, k=topk)
+    predictions = []
+    for token in tokenizer.decode(indices).split(" "):
+        predictions.append(token)
+    return predictions
+
 
 if __name__ == "__main__":
     model = nn.Sequential(nn.Linear(32, 32), nn.ReLU(), nn.Linear(32, 768))
@@ -95,8 +117,6 @@ if __name__ == "__main__":
     assert soft_samples.requires_grad == True, "no grad associated with soft samples"
 
     # testing
-    from transformers import BertForMaskedLM, BertTokenizer
-    import copy
     bert = BertForMaskedLM.from_pretrained('bert-base-cased', return_dict=True)
     bert.eval()
     freeze_parameters(bert)
@@ -104,6 +124,7 @@ if __name__ == "__main__":
     tokenizer = BertTokenizer.from_pretrained('bert-base-cased')
     parameters_tobe_pruned = [
         (bert.bert.encoder.layer[0].attention.self.query, 'bias')]
+    # prune!
     for module, name in parameters_tobe_pruned:
         Foobar_pruning(module, name, soft_samples[0])
 
@@ -118,5 +139,7 @@ if __name__ == "__main__":
     outputs = bert(**input_dict, labels=labels)
     logits = outputs.logits
     loss = outputs.loss
+    print(loss)
+    print(logits.shape)
     # for module, name in parameters_tobe_pruned:
     #     remove_prune_reparametrization(module, name)

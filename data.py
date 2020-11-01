@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-11-01 11:08:20
-LastEditTime: 2020-11-01 11:20:44
+LastEditTime: 2020-11-01 14:13:29
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/data.py
@@ -9,6 +9,8 @@ FilePath: /LAMA/data.py
 import torch
 from torch.utils.data import DataLoader, Dataset, RandomSampler
 from typing import *
+
+from config import (conceptNet_path, place_of_birth_path, place_of_death_path)
 
 
 class LAMADataset(Dataset):
@@ -27,4 +29,12 @@ class LAMADataset(Dataset):
         return self.datas[index]
 
 
+class Collator(object):
+    """
+    """
 
+    def __init__(self) -> None:
+        pass
+
+    def __call__(self, data_batch: List):
+        pass

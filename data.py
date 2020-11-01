@@ -1,16 +1,16 @@
 '''
 Author: roy
 Date: 2020-11-01 11:08:20
-LastEditTime: 2020-11-01 16:35:51
+LastEditTime: 2020-11-01 17:04:31
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/data.py
 '''
-from utils import LAMA
 import torch
 import jsonlines
 from torch.utils.data import DataLoader, Dataset, RandomSampler
 from typing import *
+from collections import OrderedDict
 from transformers import AutoTokenizer
 
 from pprint import pprint
@@ -27,7 +27,7 @@ class LAMADataset(Dataset):
         super().__init__()
         self.path = path
         self.datas = []
-        self.relation_to_id = dict()
+        self.relation_to_id = OrderedDict()
         self.read_data(self.path)
 
     def read_data(self, path: str):
@@ -65,11 +65,11 @@ class Collator(object):
         self.mask_token_id = self.tokenizer.mask_token_id
         self.max_length = max_length
         logger.info("Colaltor initialized")
+        logger.info("MASK token: {}, Mask token id: {}".format(self.mask_token, self.mask_token_id))
 
     def get_label(self, input_ids: List[int], obj_label: str):
         mask_token_index = input_ids.index(self.mask_token_id)
-        labels = input_ids.clone()
-        labels.fill_(-100)
+        labels = [-100] * len(input_ids)
         labels[mask_token_index] = self.tokenizer.convert_tokens_to_ids([obj_label])[
             0]
         return labels
@@ -94,7 +94,7 @@ class Collator(object):
             relations_in_batch.add(relation_id)
             if not relation_id in tmp_batch_dict:
                 tmp_batch_dict[relation_id] = {
-                    'masked_sentences': [], 'obj_labels': []}
+                    'masked_sentences': [masked_sentences[i]], 'obj_labels': [obj_labels[i]]}
             else:
                 tmp_batch_dict[relation_id]['masked_sentences'].append(
                     masked_sentences[i])
@@ -104,13 +104,18 @@ class Collator(object):
         input_dict_list = []
         labels_list = []
         for relation_id in relations_in_batch:
-            batch_input_dict = self.tokenizer(tmp_batch_dict[relation_id]['masked_sentences'], max_length=self.max_length,
-                                              padding='max_length', truncation=True, return_tensors='pt', return_attention_mask=True)
+            batch_input_dict = self.tokenizer(tmp_batch_dict[relation_id]['masked_sentences'], truncation=False,
+                                              padding='longest', return_tensors='pt', return_attention_mask=True)
             batch_input_ids = batch_input_dict['input_ids'].tolist()
             labels = []
             for i in range(len(tmp_batch_dict[relation_id]['masked_sentences'])):
-                label = self.get_label(
-                    batch_input_ids[i], tmp_batch_dict[relation_id]['obj_labels'][i])
+                try:
+                    label = self.get_label(
+                        batch_input_ids[i], tmp_batch_dict[relation_id]['obj_labels'][i])
+                except Exception:
+                    logger.error("Encounter exception when dealing gathering batch of data")
+                    print(tmp_batch_dict[relation_id]['masked_sentences'][i])
+                    exit()
                 labels.append(label)
             labels = torch.tensor(labels).type(
                 batch_input_dict['input_ids'].dtype)
@@ -128,6 +133,16 @@ def test():
     relation_to_id = toy_dataset.relation_to_id
     pprint(relation_to_id)
     collator = Collator(relation_to_id, args.model_name, args.max_length)
+    toy_dataloader = DataLoader(
+        toy_dataset, collate_fn=collator, batch_size=20, sampler=RandomSampler(toy_dataset))
+    for b in toy_dataloader:
+        print(b[0][0]['input_ids'].shape)
+        print(b[1][0].shape)
+        print(b[0][1]['input_ids'].shape)
+        print(b[1][1].shape)
+        print(b[0][2]['input_ids'].shape)
+        print(b[1][2].shape)
+        exit()
 
 
 if __name__ == "__main__":

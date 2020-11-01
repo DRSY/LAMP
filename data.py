@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-11-01 11:08:20
-LastEditTime: 2020-11-01 16:25:20
+LastEditTime: 2020-11-01 16:35:51
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/data.py
@@ -13,6 +13,7 @@ from torch.utils.data import DataLoader, Dataset, RandomSampler
 from typing import *
 from transformers import AutoTokenizer
 
+from pprint import pprint
 from config import (conceptNet_path, place_of_birth_path,
                     place_of_death_path, logger, get_args)
 
@@ -26,6 +27,7 @@ class LAMADataset(Dataset):
         super().__init__()
         self.path = path
         self.datas = []
+        self.relation_to_id = dict()
         self.read_data(self.path)
 
     def read_data(self, path: str):
@@ -35,6 +37,8 @@ class LAMADataset(Dataset):
             for instance in jsonlines.Reader(f):
                 masked_sentences = instance['masked_sentences']
                 relation = instance['pred']
+                if not relation in self.relation_to_id:
+                    self.relation_to_id[relation] = len(self.relation_to_id)
                 obj_label = instance['obj_label']
                 if '[MASK]' not in masked_sentences[0]:
                     continue
@@ -54,15 +58,13 @@ class Collator(object):
     Collator class for gathering samples within a mini-batch
     """
 
-    relation2id = {
-        'IsA': 0,
-    }
-
-    def __init__(self, model_name: str, max_length: int) -> None:
+    def __init__(self, relation_to_id: dict, model_name: str, max_length: int) -> None:
+        self.relation2id = relation_to_id
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.mask_token = self.tokenizer.mask_token
         self.mask_token_id = self.tokenizer.mask_token_id
         self.max_length = max_length
+        logger.info("Colaltor initialized")
 
     def get_label(self, input_ids: List[int], obj_label: str):
         mask_token_index = input_ids.index(self.mask_token_id)
@@ -120,8 +122,12 @@ class Collator(object):
 
 
 def test():
+    args = get_args()
+
     toy_dataset = LAMADataset(conceptNet_path)
-    print(len(toy_dataset))
+    relation_to_id = toy_dataset.relation_to_id
+    pprint(relation_to_id)
+    collator = Collator(relation_to_id, args.model_name, args.max_length)
 
 
 if __name__ == "__main__":

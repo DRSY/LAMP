@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-10-30 16:29:16
-LastEditTime: 2020-11-01 19:36:03
+LastEditTime: 2020-11-01 20:58:14
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /extraction/repo_LAMA.py
@@ -90,6 +90,7 @@ if __name__ == "__main__":
     logits = outputs.logits
     loss = outputs.loss
     loss.backward()
+    print(model[0].weight.grad)
     optimizer.step()
     optimizer.zero_grad()
 
@@ -103,5 +104,5 @@ if __name__ == "__main__":
     predictions = LAMA(bert, tokenizer, text, topk=10)
     pprinter.pprint(predictions)
 
-    args = get_args()
-    main(args)
+    # args = get_args()
+    # main(args)

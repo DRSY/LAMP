@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-10-30 22:18:56
-LastEditTime: 2020-11-01 19:33:59
+LastEditTime: 2020-11-01 20:58:42
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/utils.py
@@ -30,8 +30,6 @@ class FoobarPruning(prune.BasePruningMethod):
     def compute_mask(self, t, default_mask):
         """
         """
-        if self.pre_generated_mask is None:
-            return default_mask
         mask = self.pre_generated_mask
         return mask
 
@@ -46,7 +44,7 @@ def Foobar_pruning(module, name, mask=None):
     """
     sub_module = getattr(module, name)
     shape = sub_module.size()
-    if mask is not None and isinstance(mask, torch.Tensor):
+    if mask is not None and isinstance(mask, (torch.Tensor, torch.nn.Parameter)):
         assert shape == mask.size(
         ), "size of mask and parameters not consistent: {} != {}".format(mask.size(), shape)
     FoobarPruning.apply(module, name, pregenerated_mask=mask)

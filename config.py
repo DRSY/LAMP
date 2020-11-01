@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-11-01 11:16:54
-LastEditTime: 2020-11-01 19:07:12
+LastEditTime: 2020-11-01 21:26:03
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/config.py
@@ -27,5 +27,6 @@ def get_args():
                         help="name of pretrained language model")
     parser.add_argument('--max_length', type=int, default=20,
                         help="max length of input cloze question")
+    parser.add_argument('--lr', type=float, default=2e-4, help="learning rate")
     args = parser.parse_args()
     return args

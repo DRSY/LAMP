@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-11-01 11:08:20
-LastEditTime: 2020-11-01 17:04:31
+LastEditTime: 2020-11-01 17:12:03
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/data.py
@@ -75,6 +75,13 @@ class Collator(object):
         return labels
 
     def __call__(self, data_batch: List):
+        """
+        gather all instances in a mini-batch of the same relation into a group and return a tuple of length 3
+        returns:
+        [0]: List of input_dict
+        [1]: List of labels (-100 for unwanted tokens)
+        [2]: relation_ids
+        """
         def merge_batch(data_batch: List):
             masked_sentences = [data[0] for data in data_batch]
             obj_labels = [data[1] for data in data_batch]

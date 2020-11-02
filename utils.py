@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-10-30 22:18:56
-LastEditTime: 2020-11-02 10:48:55
+LastEditTime: 2020-11-02 16:54:11
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/utils.py
@@ -12,9 +12,6 @@ import torch
 import torch.nn as nn
 import torch.nn.utils.prune as prune
 from torch.distributions import Bernoulli
-
-device = torch.device("cpu")
-print(device)
 
 
 class FoobarPruning(prune.BasePruningMethod):

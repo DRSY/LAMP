@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-11-01 11:16:54
-LastEditTime: 2020-11-02 16:16:31
+LastEditTime: 2020-11-02 16:53:33
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/config.py
@@ -26,6 +26,7 @@ def get_args():
         "Probing knwoledge in pretrained language model using self-masking")
     parser = Trainer.add_argparse_args(parser)
     parser.add_argument('--seed', type=int, default=42, help="random seed")
+    parser.add_argument('--temperature', type=float, default=0.1, help="temperature of bernoulli re-parameterization tricks")
     parser.add_argument('--batch_size', type=int, default=32,
                         help="batch size", required=True)
     parser.add_argument('--data_path', type=str, default='./data/ConceptNet/test.jsonl',

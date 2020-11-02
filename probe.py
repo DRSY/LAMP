@@ -1,11 +1,12 @@
 '''
 Author: roy
 Date: 2020-10-31 11:03:02
-LastEditTime: 2020-11-02 16:20:36
+LastEditTime: 2020-11-02 18:46:59
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/probe.py
 '''
+import enum
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -60,18 +61,26 @@ def test_pl(args):
         exit()
 
 
-def probing(dataloader, optimizer, lr_scheduler, model, device):
+def probing(epoch, max_epochs, dataloader, optimizer, lr_scheduler, model, device):
     total = len(dataloader)
     logger.info("total batches in an iteration: {}".format(total))
     logger.info(
         "Start to train pruning mask generators using re-parametrization trick for bernoulli distribution")
-    for batch in tqdm(dataloader, total=total):
+    pbar = tqdm(enumerate(dataloader), total=total)
+    for batch_id, batch in pbar:
         optimizer.zero_grad()
+        total_loss = .0
+        cnt = 0
         for i in range(len(batch[-1])):
             relation_id = batch[-1][i]
             input_dict = batch[0][i].to(device)
             labels = batch[1][i].to(device)
+            cnt += batch[0][i]['input_ids'].size(0)
             loss = model.feed_batch(input_dict, labels, relation_id, device)
+            total_loss += loss
+        total_loss /= cnt
+        pbar.set_description("Epoch [{}|{}], total loss: {}".format(
+            epoch, max_epochs, total_loss))
         optimizer.step()
         lr_scheduler.step()
     logger.info("Finish training")
@@ -84,6 +93,7 @@ def main(args):
 
     # set computing device
     device = torch.device(args.device)
+    logger.info("Using {}".format(device))
 
     # instantiate dataset and dataloader
     dataset = LAMADataset(args.data_path)
@@ -110,8 +120,9 @@ def main(args):
         optimizer, args.warmup*max_steps, max_steps)
 
     # probe!
-    probing(dataloader, optimizer,
-            linear_warmup_decay_scheduler, pl_model, device)
+    for e in range(args.max_epochs):
+        probing(e+1, args.max_epochs, dataloader, optimizer,
+                linear_warmup_decay_scheduler, pl_model, device)
 
 
 if __name__ == "__main__":

@@ -1,26 +1,29 @@
 '''
 Author: roy
 Date: 2020-11-01 14:14:11
-LastEditTime: 2020-11-02 22:39:36
+LastEditTime: 2020-11-03 00:09:30
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/model.py
 '''
-from inspect import getargs
-import torch
-import torch.nn as nn
-import torch.optim as optim
-import torch.nn.utils.prune as prune
-from transformers import AutoTokenizer, AutoModelForMaskedLM, get_linear_schedule_with_warmup
-import pytorch_lightning as pl
-from pytorch_lightning import seed_everything
-from typing import *
 from copy import deepcopy
 from pprint import pprint
+from typing import *
 
-from config import logger, get_args, conceptNet_path
-from data import LAMADataset, Collator, DataLoader, RandomSampler
-from utils import Foobar_pruning, freeze_parameters, restore_init_state, remove_prune_reparametrization, bernoulli_soft_sampler, bernoulli_hard_sampler
+import pytorch_lightning as pl
+import torch
+import torch.nn as nn
+import torch.nn.utils.prune as prune
+import torch.optim as optim
+from pytorch_lightning import seed_everything
+from transformers import (AutoModelForMaskedLM, AutoTokenizer,
+                          get_linear_schedule_with_warmup)
+
+from config import conceptNet_path, get_args, logger
+from data import Collator, DataLoader, LAMADataset, RandomSampler
+from utils import (Foobar_pruning, bernoulli_hard_sampler,
+                   bernoulli_soft_sampler, freeze_parameters,
+                   remove_prune_reparametrization, restore_init_state)
 
 
 class PruningMaskGenerator(nn.Module):

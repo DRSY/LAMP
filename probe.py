@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-10-31 11:03:02
-LastEditTime: 2020-11-02 20:35:42
+LastEditTime: 2020-11-02 21:34:02
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/probe.py
@@ -108,12 +108,6 @@ def main(args):
     pl_model = SelfMaskingModel(
         len(dataset.relation_to_id), dataset.relation_to_id, args.model_name, args.lr)
     pl_model.to(device)
-
-    # # extract all trainable parameters
-    # all_params = []
-    # for ps in pl_model.pruning_mask_generators:
-    #     for p in ps:
-    #         all_params.append(p)
 
     # instantiate optimizer and lr scheduler
     optimizers = []

@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-10-30 22:18:56
-LastEditTime: 2020-11-01 20:58:42
+LastEditTime: 2020-11-02 10:48:55
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/utils.py
@@ -87,7 +87,8 @@ def bernoulli_soft_sampler(logits, temperature: float = 0.1):
     """
     Soft sampler for bernoulli distribution
     """
-    uniform_variables = torch.rand(*logits.size())
+    device = logits.device
+    uniform_variables = torch.rand(*logits.size()).to(device)
     assert uniform_variables.shape == logits.shape
     samples = torch.sigmoid(
         (logits + torch.log(uniform_variables) - torch.log(1-uniform_variables)) / temperature)

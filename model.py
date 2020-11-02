@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-11-01 14:14:11
-LastEditTime: 2020-11-02 09:49:41
+LastEditTime: 2020-11-02 16:00:57
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/model.py
@@ -45,7 +45,8 @@ class SelfMaskingModel(pl.LightningModule):
         self.save_hyperparameters()
         self.num_relations = num_relations
         self.relation_to_id = relation_to_id
-        self.id_to_relation = {value: key for key, value in self.relation_to_id.items()}
+        self.id_to_relation = {value: key for key,
+                               value in self.relation_to_id.items()}
         self.lr = lr
         self.model_name = model_name
         # pretrained language model to be probed
@@ -102,6 +103,11 @@ class SelfMaskingModel(pl.LightningModule):
             for p in ps:
                 init_method(p)
 
+    def move_pruning_mask_generators(self, device):
+        for ps in self.pruning_mask_generators:
+            for i in range(len(ps)):
+                ps[i] = ps[i].to(device)
+
     def forward(self, input_dict, labels):
         outputs = self.pretrained_language_model(**input_dict, labels=labels)
         loss = outputs.loss
@@ -116,19 +122,23 @@ class SelfMaskingModel(pl.LightningModule):
             prune.remove(module, name)
         restore_init_state(self.pretrained_language_model,
                            self.orig_state_dict)
-    
-    def feed_batch(self, input_dict, labels, relation_id: int):
+
+    def feed_batch(self, input_dict, labels, relation_id: int, device):
         """
         feed a batch of input with the same relation
         """
         pruning_masks_logits = self.pruning_mask_generators[relation_id]
-        pruning_masks_soft_samples = bernoulli_soft_sampler(pruning_masks_logits, temperature=0.1)
+        pruning_masks_soft_samples = []
+        for pruning_mask_logits in pruning_masks_logits:
+            soft_sample = bernoulli_soft_sampler(
+                pruning_mask_logits.to(device), temperature=0.1)
+            pruning_masks_soft_samples.append(soft_sample)
         self.prune(pruning_masks_soft_samples)
         # feed input batch and backward loss
         loss = self(input_dict, labels)
         loss.backward()
         self.restore()
-
+        return loss.detach().item()
 
     def training_step(self, batch: List, batch_id: int):
         input_dict_list, labels_list, relations_in_batch = batch
@@ -235,29 +245,5 @@ def test():
     print(pruning_mask_generators[1].grad)
 
 
-def test_pl():
-    args = get_args()
-    toy_dataset = LAMADataset(conceptNet_path)
-    relation_to_id = toy_dataset.relation_to_id
-    pprint(relation_to_id)
-    collator = Collator(relation_to_id, args.model_name, args.max_length)
-    toy_dataloader = DataLoader(
-        toy_dataset, collate_fn=collator, batch_size=20, sampler=RandomSampler(toy_dataset))
-    pl_model = SelfMaskingModel(
-        len(relation_to_id), relation_to_id, args.model_name, args.lr)
-    for b in toy_dataloader:
-        input_dict = b[0][0]
-        labels = b[1][0]
-        relation_id = b[-1][0]
-        print("Relation:", pl_model.id_to_relation.get(relation_id))
-        print(pl_model.pruning_mask_generators[0][0].grad)
-        # backward loss
-        pl_model.feed_batch(input_dict, labels, relation_id)
-        print('Loss backwarded')
-        print(pl_model.pruning_mask_generators[0][0].grad)
-        exit()
-
-
 if __name__ == "__main__":
-    test_pl()
-    # test()
+    pass

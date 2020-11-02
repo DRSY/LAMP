@@ -1,17 +1,19 @@
 '''
 Author: roy
 Date: 2020-11-01 11:16:54
-LastEditTime: 2020-11-01 21:26:03
+LastEditTime: 2020-11-02 16:16:31
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/config.py
 '''
 import argparse
 import logging
+from numpy.lib.shape_base import array_split
 from pytorch_lightning import Trainer
+from pprint import pprint
 
 logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s %(filename)s [line:%(lineno)d] %(levelname)s %(message)s', datefmt='%a, %d %b %Y %H:%M:%S')
+                    format='%(asctime)s %(filename)s [line:%(lineno)d] %(levelname)s:  %(message)s', datefmt='%a, %d %b %Y %H:%M:%S')
 logger = logging.getLogger(__name__)
 
 conceptNet_path = "./data/ConceptNet/test.jsonl"
@@ -23,10 +25,25 @@ def get_args():
     parser = argparse.ArgumentParser(
         "Probing knwoledge in pretrained language model using self-masking")
     parser = Trainer.add_argparse_args(parser)
-    parser.add_argument('--model_name', type=str, default='bert-base-uncased',
+    parser.add_argument('--seed', type=int, default=42, help="random seed")
+    parser.add_argument('--batch_size', type=int, default=32,
+                        help="batch size", required=True)
+    parser.add_argument('--data_path', type=str, default='./data/ConceptNet/test.jsonl',
+                        help="path of knowledge source, ends with .jsonl")
+    parser.add_argument('--model_name', type=str, default='bert-base-uncased', required=True,
                         help="name of pretrained language model")
     parser.add_argument('--max_length', type=int, default=20,
                         help="max length of input cloze question")
     parser.add_argument('--lr', type=float, default=2e-4, help="learning rate")
+    parser.add_argument('--warmup', type=float, default=0.1,
+                        help="ration of total max steps of warm up stage")
+    parser.add_argument('--device', type=str, default='cuda:3', help="gpu id")
+    parser.add_argument('--test', action='store_true', default=False,
+                        help="whether trigger test utility rather than official training")
     args = parser.parse_args()
+    pprint(vars(args))
     return args
+
+
+if __name__ == "__main__":
+    get_args()

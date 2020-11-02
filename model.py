@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-11-01 14:14:11
-LastEditTime: 2020-11-01 21:25:24
+LastEditTime: 2020-11-02 09:49:41
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/model.py
@@ -16,9 +16,10 @@ import pytorch_lightning as pl
 from pytorch_lightning import seed_everything
 from typing import *
 from copy import deepcopy
+from pprint import pprint
 
-from config import logger, get_args
-from data import LAMADataset, Collator
+from config import logger, get_args, conceptNet_path
+from data import LAMADataset, Collator, DataLoader, RandomSampler
 from utils import Foobar_pruning, freeze_parameters, restore_init_state, remove_prune_reparametrization, bernoulli_soft_sampler, bernoulli_hard_sampler
 
 
@@ -34,7 +35,7 @@ class PruningMaskGenerator(nn.Module):
         raise NotImplementedError
 
 
-class SelfMaskModel(pl.LightningModule):
+class SelfMaskingModel(pl.LightningModule):
     """
     Main lightning module
     """
@@ -44,35 +45,34 @@ class SelfMaskModel(pl.LightningModule):
         self.save_hyperparameters()
         self.num_relations = num_relations
         self.relation_to_id = relation_to_id
-        self.id_to_relation = {value: key for key, value in self.relation_to_id}
+        self.id_to_relation = {value: key for key, value in self.relation_to_id.items()}
         self.lr = lr
         self.model_name = model_name
         # pretrained language model to be probed
         self.pretrained_language_model = AutoModelForMaskedLM.from_pretrained(
             model_name, return_dict=True)
-        # a set of relation-specific pruning masking generator
-        self.pruning_mask_generators = []
-        for _ in range(num_relations):
-            self.pruning_mask_generators.append()
 
         # load parameters to be pruned
         self.parameters_tobe_pruned = tuple()
         self.get_parameters_tobe_pruned()
 
-
         # create corresponding pruning mask matrics for each module and for each relation
         self.pruning_mask_generators = []
         self.create_pruning_mask_matrices()
+        self.init_pruning_masks(torch.nn.init.uniform)
+
+        # create copy of init state
+        self.orig_state_dict = deepcopy(
+            self.pretrained_language_model.state_dict())
 
     def get_parameters_tobe_pruned(self):
         if len(self.parameters_tobe_pruned) > 0:
             return
-        num_layer = len(self.pretrained_language_model.bert.layer)
+        num_layer = len(self.pretrained_language_model.bert.encoder.layer)
         parameters_tobe_pruned = []
         # TODO: make it more general
         bert = self.pretrained_language_model.bert
         for i in range(num_layer):
-            self.parameters_tobe_pruned.append()
             parameters_tobe_pruned.append(
                 (bert.encoder.layer[i].attention.self.query, 'weight'))
             parameters_tobe_pruned.append(
@@ -88,7 +88,7 @@ class SelfMaskModel(pl.LightningModule):
         self.parameters_tobe_pruned = tuple(parameters_tobe_pruned)
 
     def create_pruning_mask_matrices(self):
-        for i in range(self.num_relations):
+        for _ in range(self.num_relations):
             pruning_masks = []
             for module, name in self.parameters_tobe_pruned:
                 _size = getattr(module, name).size()
@@ -96,17 +96,57 @@ class SelfMaskModel(pl.LightningModule):
                 pruning_mask.retain_grad()
                 pruning_masks.append(pruning_mask)
             self.pruning_mask_generators.append(pruning_masks)
-            
 
+    def init_pruning_masks(self, init_method: Callable):
+        for ps in self.pruning_mask_generators:
+            for p in ps:
+                init_method(p)
 
-    def forward(self, *args):
-        pass
+    def forward(self, input_dict, labels):
+        outputs = self.pretrained_language_model(**input_dict, labels=labels)
+        loss = outputs.loss
+        return loss
+
+    def prune(self, pruning_masks):
+        for pruning_mask, (module, name) in zip(pruning_masks, self.parameters_tobe_pruned):
+            Foobar_pruning(module, name, pruning_mask)
+
+    def restore(self):
+        for module, name in self.parameters_tobe_pruned:
+            prune.remove(module, name)
+        restore_init_state(self.pretrained_language_model,
+                           self.orig_state_dict)
+    
+    def feed_batch(self, input_dict, labels, relation_id: int):
+        """
+        feed a batch of input with the same relation
+        """
+        pruning_masks_logits = self.pruning_mask_generators[relation_id]
+        pruning_masks_soft_samples = bernoulli_soft_sampler(pruning_masks_logits, temperature=0.1)
+        self.prune(pruning_masks_soft_samples)
+        # feed input batch and backward loss
+        loss = self(input_dict, labels)
+        loss.backward()
+        self.restore()
+
 
     def training_step(self, batch: List, batch_id: int):
         input_dict_list, labels_list, relations_in_batch = batch
         num_relations = len(relations_in_batch)
         assert len(relations_in_batch) == len(
             labels_list) == len(input_dict_list)
+        total_loss = .0
+        for i in range(len(relations_in_batch)):
+            relation_id = relations_in_batch[i]
+            pruning_masks = self.pruning_mask_generators[relation_id]
+            self.prune(pruning_masks)
+            # feed examples
+            input_dict = input_dict_list[i]
+            labels = labels_list[i]
+            loss = self(input_dict, labels)
+            total_loss += loss
+
+        return {'loss': total_loss}
 
     def validation_step(self, *args, **kwargs):
         pass
@@ -125,7 +165,7 @@ class SelfMaskModel(pl.LightningModule):
         for ps in self.pruning_mask_generators:
             for p in ps:
                 all_params.append(p)
-        optimizer = optim.Adam(all_params, lr=2e-4)
+        optimizer = optim.Adam(all_params, lr=self.hparams.lr)
         return optimizer
 
 
@@ -155,6 +195,7 @@ def test():
     num_layers = len(bert.encoder.layer)
     parameters_tobe_pruned = []
     pruning_mask_generators = []
+    cp_pruning_mask_generators = []
     for i in range(num_layers):
         parameters_tobe_pruned.append(
             (bert.encoder.layer[i].attention.self.query, 'weight'))
@@ -173,27 +214,50 @@ def test():
     for module, name in parameters_tobe_pruned:
         # associate each module.name with a purning mask generator matrix that has the same shape
         _size = getattr(module, name).size()
-        pruning_matrix = torch.nn.Parameter(torch.rand(
-            *_size).float(), requires_grad=True).to(torch.device('cuda:0'))
+        pruning_matrix = torch.nn.Parameter(
+            torch.rand(*_size)).to(torch.device('cuda:0'))
         pruning_matrix.retain_grad()
         pruning_mask_generators.append(pruning_matrix)
-    nelements = 0
+    # opt = optim.Adam(pruning_mask_generators, lr=2e-4)
     backup_state_dict = deepcopy(model.state_dict())
     for idx, (module, name) in enumerate(parameters_tobe_pruned):
         mask = pruning_mask_generators[idx]
         Foobar_pruning(module, name, mask=mask)
-        nelements += getattr(module, name).nelement()
-    print('Total number of elements: {}'.format(nelements))
     print('Pruning finished')
 
     outputs = model(**input_dict, labels=label)
     loss = outputs.loss
-    logits = outputs.logits
-    print(loss)
-    loss.backward()
     print(pruning_mask_generators[0].grad)
-    # print(model.bert.encoder.layer[0].attention.self.query.weight)
+    print(pruning_mask_generators[1].grad)
+    loss.backward()
+    print('loss backward')
+    print(pruning_mask_generators[0].grad)
+    print(pruning_mask_generators[1].grad)
+
+
+def test_pl():
+    args = get_args()
+    toy_dataset = LAMADataset(conceptNet_path)
+    relation_to_id = toy_dataset.relation_to_id
+    pprint(relation_to_id)
+    collator = Collator(relation_to_id, args.model_name, args.max_length)
+    toy_dataloader = DataLoader(
+        toy_dataset, collate_fn=collator, batch_size=20, sampler=RandomSampler(toy_dataset))
+    pl_model = SelfMaskingModel(
+        len(relation_to_id), relation_to_id, args.model_name, args.lr)
+    for b in toy_dataloader:
+        input_dict = b[0][0]
+        labels = b[1][0]
+        relation_id = b[-1][0]
+        print("Relation:", pl_model.id_to_relation.get(relation_id))
+        print(pl_model.pruning_mask_generators[0][0].grad)
+        # backward loss
+        pl_model.feed_batch(input_dict, labels, relation_id)
+        print('Loss backwarded')
+        print(pl_model.pruning_mask_generators[0][0].grad)
+        exit()
 
 
 if __name__ == "__main__":
-    test()
+    test_pl()
+    # test()

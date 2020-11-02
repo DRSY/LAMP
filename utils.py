@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-10-30 22:18:56
-LastEditTime: 2020-11-02 16:54:11
+LastEditTime: 2020-11-02 21:30:41
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/utils.py
@@ -13,6 +13,7 @@ import torch.nn as nn
 import torch.nn.utils.prune as prune
 from torch.distributions import Bernoulli
 
+from typing import List, Dict
 
 class FoobarPruning(prune.BasePruningMethod):
     """
@@ -92,7 +93,7 @@ def bernoulli_soft_sampler(logits, temperature: float = 0.1):
     return samples
 
 
-def LAMA(model, tokenizer, input_w_mask, topk=5):
+def LAMA(model, tokenizer, device, input_w_mask, topk=5):
     inputs = tokenizer(input_w_mask, return_tensors='pt')
     mask_id = inputs['input_ids'][0].tolist().index(tokenizer.mask_token_id)
     inputs.to(device)
@@ -104,6 +105,18 @@ def LAMA(model, tokenizer, input_w_mask, topk=5):
     for token in tokenizer.decode(indices).split(" "):
         predictions.append(token)
     return predictions
+
+def save_pruning_masks_generators(model_name: str, pruning_masks_generators: List[List], id_to_relation: Dict, save_path: str):
+    """
+    Save pruning mask generators specified with model name, relation type and number of transformer blocks of interest.
+    """
+    for i in range(len(id_to_relation)):
+        relation_str = id_to_relation[i]
+        file_prefix = "{}_{}_{}.pickle".format(model_name, relation_str, len(pruning_masks_generators[i]))
+        with open(file_prefix, mode='wb') as f:
+            torch.save(pruning_masks_generators[i], f)
+        print("Pruning mask generators for {} is saved at {}".format(relation_str, file_prefix))
+
 
 def test():
     model = nn.Sequential(nn.Linear(32, 32), nn.ReLU(), nn.Linear(32, 768))

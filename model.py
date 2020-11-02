@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-11-01 14:14:11
-LastEditTime: 2020-11-02 16:00:57
+LastEditTime: 2020-11-02 22:39:36
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/model.py
@@ -108,10 +108,28 @@ class SelfMaskingModel(pl.LightningModule):
             for i in range(len(ps)):
                 ps[i] = ps[i].to(device)
 
-    def forward(self, input_dict, labels):
+    @staticmethod
+    def get_position_of_gold_label(logits, labels):
+        bs = labels.size(0)
+        positions = []
+        for i in range(bs):
+            tmp = labels[i].eq(-100).eq(0).int().tolist()
+            idx = tmp.index(1)
+            mask_token_id = labels[i][idx].item()
+            _sorted = torch.sort(
+                logits[i, idx], descending=True).indices.tolist()
+            position = _sorted.index(mask_token_id)
+            positions.append(position)
+        return positions
+
+    def forward(self, input_dict, labels, rl: bool = False):
         outputs = self.pretrained_language_model(**input_dict, labels=labels)
         loss = outputs.loss
-        return loss
+        if not rl:
+            return loss
+        logits = outputs.logits
+        positions = self.get_position_of_gold_label(logits, labels)
+        return positions
 
     def prune(self, pruning_masks):
         for pruning_mask, (module, name) in zip(pruning_masks, self.parameters_tobe_pruned):
@@ -126,6 +144,7 @@ class SelfMaskingModel(pl.LightningModule):
     def feed_batch(self, input_dict, labels, relation_id: int, device):
         """
         feed a batch of input with the same relation
+        use soft approximation of discrete Bernoulli distribution
         """
         pruning_masks_logits = self.pruning_mask_generators[relation_id]
         pruning_masks_soft_samples = []
@@ -133,12 +152,30 @@ class SelfMaskingModel(pl.LightningModule):
             soft_sample = bernoulli_soft_sampler(
                 pruning_mask_logits.to(device), temperature=0.1)
             pruning_masks_soft_samples.append(soft_sample)
-        self.prune(pruning_masks_soft_samples)
+        self.prune(pruning_masks=pruning_masks_soft_samples)
+
         # feed input batch and backward loss
         loss = self(input_dict, labels)
         loss.backward()
         self.restore()
         return loss.detach().item()
+
+    def feed_batch_rl(self, input_dict, labels, relation_id, device):
+        """
+        feed a batch of input with the same relation
+        use hard sampling of discrete Bernoulli distribution
+        NOTE: potentially not as effective as soft approximation
+        """
+        pruning_masks_logits = self.pruning_mask_generators[relation_id]
+        pruning_masks_hard_samples = []
+        for pruning_mask_logits in pruning_masks_logits:
+            hard_sample, log_prob = bernoulli_hard_sampler(
+                torch.sigmoid(pruning_mask_logits))
+            pruning_masks_hard_samples.append(hard_sample)
+        self.prune(pruning_masks=pruning_masks_hard_samples)
+
+        # feed input batch and backward loss
+        positions = self(input_dict, labels, rl=True)
 
     def training_step(self, batch: List, batch_id: int):
         input_dict_list, labels_list, relations_in_batch = batch

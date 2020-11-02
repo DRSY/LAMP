@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-11-01 11:08:20
-LastEditTime: 2020-11-01 17:12:03
+LastEditTime: 2020-11-02 22:40:26
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/data.py
@@ -64,7 +64,7 @@ class Collator(object):
         self.mask_token = self.tokenizer.mask_token
         self.mask_token_id = self.tokenizer.mask_token_id
         self.max_length = max_length
-        logger.info("Colaltor initialized")
+        logger.info("Collator initialized")
         logger.info("MASK token: {}, Mask token id: {}".format(self.mask_token, self.mask_token_id))
 
     def get_label(self, input_ids: List[int], obj_label: str):

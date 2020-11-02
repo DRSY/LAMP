@@ -1,16 +1,16 @@
 '''
 Author: roy
 Date: 2020-10-31 11:03:02
-LastEditTime: 2020-11-02 21:34:02
+LastEditTime: 2020-11-02 22:48:38
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/probe.py
 '''
-import enum
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.utils.prune as prune
+from torch.serialization import save
 from transformers import get_linear_schedule_with_warmup
 import jsonlines
 from pprint import pprint
@@ -20,6 +20,7 @@ import pytorch_lightning as pl
 from config import logger, get_args
 from model import SelfMaskingModel
 from data import LAMADataset, Collator, DataLoader, Dataset, RandomSampler
+import utils
 
 
 def test_pl(args):
@@ -63,10 +64,8 @@ def test_pl(args):
 
 def probing(epoch, max_epochs, dataloader, optimizers, lr_schedulers, model, device):
     total = len(dataloader)
-    logger.info("total batches in an iteration: {}".format(total))
-    logger.info(
-        "Start to train pruning mask generators using re-parametrization trick for bernoulli distribution")
     pbar = tqdm(enumerate(dataloader), total=total)
+    avg_loss = .0
     for batch_id, batch in pbar:
         total_loss = .0
         cnt = 0
@@ -83,9 +82,11 @@ def probing(epoch, max_epochs, dataloader, optimizers, lr_schedulers, model, dev
             scheduler.step()
             total_loss += loss
         total_loss /= cnt
+        avg_loss += total_loss
         pbar.set_description("Epoch: [{}|{}], Iter: [{}|{}], total loss: {}".format(
             epoch, max_epochs, batch_id+1, total, total_loss))
-    logger.info("Finish training")
+    avg_loss /= total
+    return avg_loss
 
 
 def main(args):
@@ -121,9 +122,19 @@ def main(args):
         schedulers.append(scheduler)
 
     # probe!
+    lowest_loss = 1e9
+    logger.info(
+        "Start to train pruning mask generators using soft approximation")
     for e in range(args.max_epochs):
-        probing(e+1, args.max_epochs, dataloader, optimizers,
-                schedulers, pl_model, device)
+        loss = probing(e+1, args.max_epochs, dataloader, optimizers,
+                       schedulers, pl_model, device)
+        if loss < lowest_loss:
+            lowest_loss = loss
+            utils.save_pruning_masks_generators(
+                args.model_name, pl_model.pruning_mask_generators, pl_model.id_to_relation, args.save_dir)
+            logger.info(
+                "Updateed lowest loss: {}, pruning mask generators saved!")
+        logger.info("Epoch {} finished".format(e+1))
 
 
 if __name__ == "__main__":

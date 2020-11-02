@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-10-30 22:18:56
-LastEditTime: 2020-11-02 21:30:41
+LastEditTime: 2020-11-02 22:47:31
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/utils.py
@@ -14,6 +14,7 @@ import torch.nn.utils.prune as prune
 from torch.distributions import Bernoulli
 
 from typing import List, Dict
+
 
 class FoobarPruning(prune.BasePruningMethod):
     """
@@ -106,16 +107,19 @@ def LAMA(model, tokenizer, device, input_w_mask, topk=5):
         predictions.append(token)
     return predictions
 
-def save_pruning_masks_generators(model_name: str, pruning_masks_generators: List[List], id_to_relation: Dict, save_path: str):
+
+def save_pruning_masks_generators(model_name: str, pruning_masks_generators: List[List], id_to_relation: Dict, save_dir: str):
     """
     Save pruning mask generators specified with model name, relation type and number of transformer blocks of interest.
     """
     for i in range(len(id_to_relation)):
         relation_str = id_to_relation[i]
-        file_prefix = "{}_{}_{}.pickle".format(model_name, relation_str, len(pruning_masks_generators[i]))
+        file_prefix = "{}/{}_{}_{}.pickle".format(save_dir,
+                                                  model_name, relation_str, len(pruning_masks_generators[i]))
         with open(file_prefix, mode='wb') as f:
             torch.save(pruning_masks_generators[i], f)
-        print("Pruning mask generators for {} is saved at {}".format(relation_str, file_prefix))
+        print("Pruning mask generators for {} is saved at {}".format(
+            relation_str, file_prefix))
 
 
 def test():

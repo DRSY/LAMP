@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-10-31 11:03:02
-LastEditTime: 2020-11-02 18:46:59
+LastEditTime: 2020-11-02 19:03:00
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/probe.py
@@ -61,28 +61,30 @@ def test_pl(args):
         exit()
 
 
-def probing(epoch, max_epochs, dataloader, optimizer, lr_scheduler, model, device):
+def probing(epoch, max_epochs, dataloader, optimizers, lr_schedulers, model, device):
     total = len(dataloader)
     logger.info("total batches in an iteration: {}".format(total))
     logger.info(
         "Start to train pruning mask generators using re-parametrization trick for bernoulli distribution")
     pbar = tqdm(enumerate(dataloader), total=total)
     for batch_id, batch in pbar:
-        optimizer.zero_grad()
         total_loss = .0
         cnt = 0
         for i in range(len(batch[-1])):
             relation_id = batch[-1][i]
+            optimizer = optimizers[relation_id]
+            scheduler = lr_schedulers[relation_id]
+            optimizer.zero_grad()
             input_dict = batch[0][i].to(device)
             labels = batch[1][i].to(device)
             cnt += batch[0][i]['input_ids'].size(0)
             loss = model.feed_batch(input_dict, labels, relation_id, device)
+            optimizer.step()
+            scheduler.step()
             total_loss += loss
         total_loss /= cnt
-        pbar.set_description("Epoch [{}|{}], total loss: {}".format(
-            epoch, max_epochs, total_loss))
-        optimizer.step()
-        lr_scheduler.step()
+        pbar.set_description("Epoch: [{}|{}], Iter: [{}|{}], total loss: {}".format(
+            epoch, max_epochs, batch_id+1, total, total_loss))
     logger.info("Finish training")
 
 
@@ -107,22 +109,27 @@ def main(args):
         len(dataset.relation_to_id), dataset.relation_to_id, args.model_name, args.lr)
     pl_model.to(device)
 
-    # extract all trainable parameters
-    all_params = []
-    for ps in pl_model.pruning_mask_generators:
-        for p in ps:
-            all_params.append(p)
+    # # extract all trainable parameters
+    # all_params = []
+    # for ps in pl_model.pruning_mask_generators:
+    #     for p in ps:
+    #         all_params.append(p)
 
     # instantiate optimizer and lr scheduler
-    optimizer = optim.Adam(all_params, lr=args.lr)
+    optimizers = []
+    schedulers = []
     max_steps = len(dataloader) * args.max_epochs
-    linear_warmup_decay_scheduler = get_linear_schedule_with_warmup(
-        optimizer, args.warmup*max_steps, max_steps)
+    for ps in pl_model.pruning_mask_generators:
+        optimizer = optim.Adam(ps, lr=args.lr)
+        scheduler = get_linear_schedule_with_warmup(
+            optimizer, args.warmup*max_steps, max_steps)
+        optimizers.append(optimizer)
+        schedulers.append(scheduler)
 
     # probe!
     for e in range(args.max_epochs):
-        probing(e+1, args.max_epochs, dataloader, optimizer,
-                linear_warmup_decay_scheduler, pl_model, device)
+        probing(e+1, args.max_epochs, dataloader, optimizers,
+                schedulers, pl_model, device)
 
 
 if __name__ == "__main__":

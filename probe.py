@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-10-31 11:03:02
-LastEditTime: 2020-11-03 11:10:29
+LastEditTime: 2020-11-03 14:27:29
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/probe.py
@@ -87,7 +87,11 @@ def validate(model: SelfMaskingModel, tokenizer, device, corpus_file_path: str):
             relation_id = model.relation_to_id[predicate_id]
             masked_sentence = evidences[0]['masked_sentence']
             pruning_mask_generator = model.pruning_mask_generators[relation_id]
-            model.prune(pruning_masks=pruning_mask_generator)
+            hard_samples = []
+            for pruning_mask in pruning_mask_generator:
+                hard_sample, _ = utils.bernoulli_hard_sampler(torch.sigmoid(pruning_mask))
+                hard_samples.append(hard_sample)
+            model.prune(pruning_masks=hard_samples)
             pruned_predictions = utils.LAMA(
                 model.pretrained_language_model, tokenizer, device, masked_sentence, topk=5)
             pos = pruned_predictions.index(obj_label)
@@ -106,7 +110,11 @@ def validate(model: SelfMaskingModel, tokenizer, device, corpus_file_path: str):
             relation_id = model.relation_to_id[relation]
             relation_specific_total[relation_id] += 1
             pruning_mask_generator = model.pruning_mask_generators[relation_id]
-            model.prune(pruning_masks=pruning_mask_generator)
+            hard_samples = []
+            for pruning_mask in pruning_mask_generator:
+                hard_sample, _ = utils.bernoulli_hard_sampler(torch.sigmoid(pruning_mask))
+                hard_samples.append(hard_sample)
+            model.prune(pruning_masks=hard_samples)
             pruned_predictions = utils.LAMA(
                 model.pretrained_language_model, tokenizer, device, masked_sentences[0], topk=5)
             pos = pruned_predictions.index(obj_label)

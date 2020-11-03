@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-11-01 11:16:54
-LastEditTime: 2020-11-03 16:40:02
+LastEditTime: 2020-11-03 20:32:09
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/config.py
@@ -19,7 +19,8 @@ conceptNet_path = "./data/ConceptNet/test.jsonl"
 place_of_birth_path = "./data/Google_RE/place_of_birth_test.jsonl"
 place_of_death_path = "./data/Google_RE/place_of_death_test.jsonl"
 
-MODEL_NAMES = ['bert-base-cased', 'bert-base-uncased',
+# allowed models
+MODEL_NAMES = ['bert-base-cased', 'bert-base-uncased', 'distilbert-base-cased', 'distilbert-base-uncased', 'distilroberta-base',
                'bert-large-uncased', 'bert-large-cased', 'roberta-base', 'roberta-large']
 
 
@@ -51,6 +52,9 @@ def get_args():
     parser.add_argument('--bottom_layer_index', type=int, default=0)
     parser.add_argument('--top_layer_index', type=int, default=11)
     args = parser.parse_args()
+    if args.model_name not in MODEL_NAMES:
+        raise Exception("model name {} not in predefined list: {}".format_map(
+            args.model_name, MODEL_NAMES))
     pprint(vars(args))
     return args
 

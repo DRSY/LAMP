@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-11-01 14:14:11
-LastEditTime: 2020-11-03 17:20:58
+LastEditTime: 2020-11-03 20:10:43
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/model.py
@@ -15,12 +15,9 @@ import torch
 import torch.nn as nn
 import torch.nn.utils.prune as prune
 import torch.optim as optim
-from pytorch_lightning import seed_everything
 from transformers import (AutoModelForMaskedLM, AutoTokenizer,
                           get_linear_schedule_with_warmup)
 
-from config import conceptNet_path, get_args, logger
-from data import Collator, DataLoader, LAMADataset, RandomSampler
 from utils import (Foobar_pruning, bernoulli_hard_sampler,
                    bernoulli_soft_sampler, freeze_parameters,
                    remove_prune_reparametrization, restore_init_state)
@@ -52,6 +49,8 @@ class SelfMaskingModel(pl.LightningModule):
         self.relation_to_id = relation_to_id
         self.id_to_relation = {value: key for key,
                                value in self.relation_to_id.items()}
+        print("Relations:")
+        pprint(self.relation_to_id)
         self.lr = lr
         self.model_name = model_name
         # pretrained language model to be probed
@@ -82,18 +81,38 @@ class SelfMaskingModel(pl.LightningModule):
         else:
             layers = self.pretrained_language_model.bert.encoder.layer
         for i in range(bli, tli+1):
-            parameters_tobe_pruned.append(
-                (layers[i].attention.self.query, 'weight'))
-            parameters_tobe_pruned.append(
-                (layers[i].attention.self.key, 'weight'))
-            parameters_tobe_pruned.append(
-                (layers[i].attention.self.value, 'weight'))
-            parameters_tobe_pruned.append(
-                (layers[i].attention.output.dense, 'weight'))
-            parameters_tobe_pruned.append(
-                (layers[i].intermediate.dense, 'weight'))
-            parameters_tobe_pruned.append(
-                (layers[i].output.dense, 'weight'))
+            try:
+                parameters_tobe_pruned.append(
+                    (layers[i].attention.self.query, 'weight'))
+                parameters_tobe_pruned.append(
+                    (layers[i].attention.self.key, 'weight'))
+                parameters_tobe_pruned.append(
+                    (layers[i].attention.self.value, 'weight'))
+                parameters_tobe_pruned.append(
+                    (layers[i].attention.output.dense, 'weight'))
+                parameters_tobe_pruned.append(
+                    (layers[i].intermediate.dense, 'weight'))
+                parameters_tobe_pruned.append(
+                    (layers[i].output.dense, 'weight'))
+            except Exception:
+                parameters_tobe_pruned.append(
+                    (layers[i].attention.q_lin, 'weight')
+                )
+                parameters_tobe_pruned.append(
+                    (layers[i].attention.k_lin, 'weight')
+                )
+                parameters_tobe_pruned.append(
+                    (layers[i].attention.v_lin, 'weight')
+                )
+                parameters_tobe_pruned.append(
+                    (layers[i].attention.out_lin, 'weight')
+                )
+                parameters_tobe_pruned.append(
+                    (layers[i].ffn.lin1, 'weight')
+                )
+                parameters_tobe_pruned.append(
+                    (layers[i].ffn.lin2, 'weight')
+                )
         self.parameters_tobe_pruned = tuple(parameters_tobe_pruned)
 
     def create_pruning_mask_matrices(self):

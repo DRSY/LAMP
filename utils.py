@@ -1,12 +1,12 @@
 '''
 Author: roy
 Date: 2020-10-30 22:18:56
-LastEditTime: 2020-11-03 17:21:11
+LastEditTime: 2020-11-04 00:08:34
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/utils.py
 '''
-from transformers import BertForMaskedLM, BertTokenizer
+from transformers import AutoModelForMaskedLM, AutoTokenizer
 import copy
 import torch
 import torch.nn as nn
@@ -29,7 +29,6 @@ class FoobarPruning(prune.BasePruningMethod):
     def compute_mask(self, t, default_mask):
         """
         """
-        return default_mask
         mask = self.pre_generated_mask
         return mask
 
@@ -98,7 +97,7 @@ def bernoulli_soft_sampler(logits, temperature: float = 0.1):
 
 
 def LAMA(model, tokenizer, device, input_w_mask, topk=5):
-    model.eval()
+    # model.eval()
     inputs = tokenizer(input_w_mask, return_tensors='pt')
     mask_id = inputs['input_ids'][0].tolist().index(tokenizer.mask_token_id)
     inputs.to(device)
@@ -107,7 +106,7 @@ def LAMA(model, tokenizer, device, input_w_mask, topk=5):
     probs = torch.softmax(logits[0, mask_id], dim=-1)
     _, indices = torch.topk(probs, k=topk)
     predictions = []
-    for token in tokenizer.decode(indices).split(" "):
+    for token in tokenizer.decode(indices).strip().split(" "):
         predictions.append(token.lower())
     return predictions
 
@@ -138,11 +137,12 @@ def test():
     assert soft_samples.requires_grad == True, "no grad associated with soft samples"
 
     # testing
-    bert = BertForMaskedLM.from_pretrained('bert-base-cased', return_dict=True)
+    bert = AutoModelForMaskedLM.from_pretrained(
+        'roberta-base', return_dict=True)
     bert.eval()
     freeze_parameters(bert)
     init_state = copy.deepcopy(bert.state_dict())
-    tokenizer = BertTokenizer.from_pretrained('bert-base-cased')
+    tokenizer = AutoTokenizer.from_pretrained('roberta-base')
     parameters_tobe_pruned = [
         (bert.bert.encoder.layer[0].attention.self.query, 'bias')]
     # prune!

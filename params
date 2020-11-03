@@ -1,9 +1,9 @@
-bert-base-cased
+bert-base-uncased
 0.2
 3
 5e-5
 32
 4
 0.1
-8
-11
+0
+2

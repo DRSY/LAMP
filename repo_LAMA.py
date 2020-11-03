@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-10-30 16:29:16
-LastEditTime: 2020-11-01 20:58:14
+LastEditTime: 2020-11-03 19:35:20
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /extraction/repo_LAMA.py
@@ -15,7 +15,7 @@ import copy
 import jsonlines
 import torch.nn.utils.prune as prune
 import pprint
-from utils import (Foobar_pruning, device, remove_prune_reparametrization,
+from utils import (Foobar_pruning, remove_prune_reparametrization,
                    bernoulli_hard_sampler, bernoulli_soft_sampler, freeze_parameters, restore_init_state, LAMA)
 from config import get_args
 
@@ -63,15 +63,16 @@ if __name__ == "__main__":
     assert soft_samples.requires_grad == True, "no grad associated with soft samples"
 
     # testing
-    text = "The capital of England is [MASK]."
     obj_label = "London"
-    bert = BertForMaskedLM.from_pretrained('bert-base-cased', return_dict=True)
+    bert = AutoModelForMaskedLM.from_pretrained('roberta-base', return_dict=True)
     bert.eval()
     freeze_parameters(bert)
     init_state = copy.deepcopy(bert.state_dict())
-    tokenizer = BertTokenizer.from_pretrained('bert-base-cased')
-    predictions = LAMA(bert, tokenizer, text, topk=10)
+    tokenizer = AutoTokenizer.from_pretrained('roberta-base')
+    text = "The capital of England is [MASK].".replace('[MASK]', tokenizer.mask_token)
+    predictions = LAMA(bert, tokenizer, torch.device('cpu'), text, topk=10)
     pprinter.pprint(predictions)
+    exit()
     parameters_tobe_pruned = [
         (bert.bert.encoder.layer[0].attention.self.query, 'bias')]
     # prune!

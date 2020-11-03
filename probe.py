@@ -1,16 +1,13 @@
 '''
 Author: roy
 Date: 2020-10-31 11:03:02
-LastEditTime: 2020-11-03 14:27:29
+LastEditTime: 2020-11-04 00:08:18
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/probe.py
 '''
 import torch
-import torch.nn as nn
 import torch.optim as optim
-import torch.nn.utils.prune as prune
-from torch.serialization import save
 from transformers import get_linear_schedule_with_warmup
 import jsonlines
 from pprint import pprint
@@ -21,8 +18,9 @@ import prettytable as pt
 
 from config import logger, get_args
 from model import SelfMaskingModel
-from data import LAMADataset, Collator, DataLoader, Dataset, RandomSampler
+from data import LAMADataset, Collator, DataLoader, RandomSampler
 import utils
+from utils import freeze_parameters
 
 
 def test_pl(args):
@@ -64,7 +62,7 @@ def test_pl(args):
         exit()
 
 
-def validate(model: SelfMaskingModel, tokenizer, device, corpus_file_path: str):
+def validate(model: SelfMaskingModel, tokenizer, device, corpus_file_path: str, total: int, use_expectation: bool = True):
     """
     validate pruning masks on LAMA dataset
     """
@@ -77,8 +75,7 @@ def validate(model: SelfMaskingModel, tokenizer, device, corpus_file_path: str):
     pruned_top1 = 0
     unpruned_p1 = .0
     unpruned_top1 = 0
-    total = 0
-    for instance in tqdm(jsonlines.Reader(corpus_fileobj)):
+    for instance in tqdm(jsonlines.Reader(corpus_fileobj), total=total):
         total += 1
         if 'TREx' in corpus_file_path:
             evidences = instance['evidences']
@@ -89,45 +86,71 @@ def validate(model: SelfMaskingModel, tokenizer, device, corpus_file_path: str):
             pruning_mask_generator = model.pruning_mask_generators[relation_id]
             hard_samples = []
             for pruning_mask in pruning_mask_generator:
-                hard_sample, _ = utils.bernoulli_hard_sampler(torch.sigmoid(pruning_mask))
+                if use_expectation:
+                    hard_sample = torch.sigmoid(pruning_mask).to(
+                        device)  # use the expectation values
+                else:
+                    hard_sample = utils.bernoulli_hard_sampler(
+                        torch.sigmoid(pruning_mask), require_logprob=False).to(device)  # use discrete Bernoulli variables
                 hard_samples.append(hard_sample)
             model.prune(pruning_masks=hard_samples)
             pruned_predictions = utils.LAMA(
                 model.pretrained_language_model, tokenizer, device, masked_sentence, topk=5)
-            pos = pruned_predictions.index(obj_label)
-            if pos == 1:
-                pruned_top1 += 1
+            try:
+                pos = pruned_predictions.index(obj_label)
+                if pos == 0:
+                    pruned_top1 += 1
+            except ValueError:
+                pass
             model.restore()
             unpruned_predictions = utils.LAMA(
                 model.pretrained_language_model, tokenizer, device, masked_sentence, topk=5)
-            pos = unpruned_predictions.index(obj_label)
-            if pos == 1:
-                unpruned_top1 += 1
+            try:
+                pos = unpruned_predictions.index(obj_label)
+                if pos == 0:
+                    unpruned_top1 += 1
+            except ValueError:
+                pass
         else:
             masked_sentences = instance['masked_sentences']
+            # masked_sentences = ['The capital of England is [MASK].']
             obj_label = instance['obj_label'].lower()
+            # obj_label = 'London'.lower()
             relation = instance['pred']
             relation_id = model.relation_to_id[relation]
             relation_specific_total[relation_id] += 1
-            pruning_mask_generator = model.pruning_mask_generators[relation_id]
-            hard_samples = []
-            for pruning_mask in pruning_mask_generator:
-                hard_sample, _ = utils.bernoulli_hard_sampler(torch.sigmoid(pruning_mask))
-                hard_samples.append(hard_sample)
-            model.prune(pruning_masks=hard_samples)
-            pruned_predictions = utils.LAMA(
-                model.pretrained_language_model, tokenizer, device, masked_sentences[0], topk=5)
-            pos = pruned_predictions.index(obj_label)
-            if pos == 1:
-                pruned_top1 += 1
-                relation_specific_p1[relation_id] += 1
-            model.restore()
+            # pruning_mask_generator = model.pruning_mask_generators[relation_id]
+            # hard_samples = []
+            # for pruning_mask in pruning_mask_generator:
+            #     if use_expectation:
+            #         hard_sample = torch.sigmoid(pruning_mask).to(
+            #             device)  # use the expectation values
+            #     else:
+            #         hard_sample = utils.bernoulli_hard_sampler(
+            #             torch.sigmoid(pruning_mask), require_logprob=False).to(device)  # use discrete Bernoulli variables
+            #     hard_samples.append(hard_sample)
+            # model.prune(pruning_masks=hard_samples)
+            # pruned_predictions = utils.LAMA(
+            #     model.pretrained_language_model, tokenizer, device, masked_sentences[0], topk=5)
+            # try:
+            #     pos = pruned_predictions.index(obj_label)
+            #     if pos == 0:
+            #         pruned_top1 += 1
+            #         relation_specific_p1[relation_id] += 1
+            # except ValueError:
+            #     pass
+            # model.restore()
             unpruned_predictions = utils.LAMA(
-                model.pretrained_language_model, tokenizer, device, masked_sentences[0], topk=5)
-            pos = unpruned_predictions.index(obj_label)
-            if pos == 1:
-                unpruned_top1 += 1
-                relation_specific_unpruned_p1[relation_id] += 1
+                model.pretrained_language_model, tokenizer, device, masked_sentences[0].replace('[MASK]', tokenizer.mask_token), topk=5)
+            # print(pruned_predictions)
+            # print(unpruned_predictions)
+            try:
+                pos = unpruned_predictions.index(obj_label)
+                if pos == 0:
+                    unpruned_top1 += 1
+                    relation_specific_unpruned_p1[relation_id] += 1
+            except ValueError:
+                pass
     # macro-average
     pruned_p1 = pruned_top1 / total
     unpruned_p1 = unpruned_top1 / total
@@ -194,9 +217,13 @@ def main(args):
                             batch_size=args.batch_size, sampler=RandomSampler(dataset))
 
     # instantiate model
-    pl_model = SelfMaskingModel(
-        len(dataset.relation_to_id), dataset.relation_to_id, args.model_name, args.lr)
+    logger.info("Bottom Layer Index: {}".format(args.bottom_layer_index))
+    logger.info("Top Layer Index: {}".format(args.top_layer_index))
+    pl_model = SelfMaskingModel(args.bottom_layer_index, args.top_layer_index,
+                                len(dataset.relation_to_id), dataset.relation_to_id, args.model_name, args.lr)
     pl_model.to(device)
+    pl_model.pretrained_language_model.eval()
+    freeze_parameters(pl_model.pretrained_language_model)
 
     # instantiate optimizer and lr scheduler
     optimizers = []
@@ -218,10 +245,10 @@ def main(args):
         loss = probing(e+1, args.max_epochs, dataloader, optimizers,
                        schedulers, pl_model, device)
         # validation
-        logger.info("Epoch {} training finished".format(e+1))
+        logger.info("Epoch {} training finished, loss: {}".format(e+1, loss))
         logger.info("Start validation!")
         ret_dict = validate(
-            pl_model, collator.tokenizer, device, args.data_path)
+            pl_model, collator.tokenizer, device, args.data_path, len(dataset), args.soft_infer)
         logger.info("Finish validation!")
         print("Metrics:")
         tb = pt.PrettyTable()
@@ -238,7 +265,7 @@ def main(args):
             utils.save_pruning_masks_generators(
                 args.model_name, pl_model.pruning_mask_generators, pl_model.id_to_relation, args.save_dir)
             logger.info(
-                "Updateed lowest loss: {}, pruning mask generators saved!")
+                "New best pruned P@1 observed, pruning mask generators saved!")
 
 
 if __name__ == "__main__":
@@ -247,3 +274,27 @@ if __name__ == "__main__":
         test_pl(args)
     else:
         main(args)
+
+
+# results for unpruned models
+# roberta-large: 18.56
+# roberta-base: 15.51
+# bert-large-uncased: 15.13
+# bert-large-cased: 15.06
+# bert-base-uncased: 12.87
+# distilroberta-base: 12.49
+# bert-base-cased: 12.04
+# distilbert-base-uncased: 11.37
+# distilbert-base-cased: 9.82
+
+
+# results for pruned models
+# bert-base-cased: 
+# bert-base-uncased: 
+# bert-large-cased: 
+# bert-large-uncased: 
+# roberta-base: 
+# roberta-large: 
+# distilroberta-base
+# distilbert-base-cased:
+# distilbert-base-uncased:

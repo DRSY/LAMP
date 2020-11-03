@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-11-01 14:14:11
-LastEditTime: 2020-11-03 00:09:30
+LastEditTime: 2020-11-03 17:20:58
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/model.py
@@ -43,9 +43,11 @@ class SelfMaskingModel(pl.LightningModule):
     Main lightning module
     """
 
-    def __init__(self, num_relations: int, relation_to_id: dict, model_name: str, lr: float) -> None:
+    def __init__(self, bli: int, tli: int, num_relations: int, relation_to_id: dict, model_name: str, lr: float) -> None:
         super().__init__()
         self.save_hyperparameters()
+        self.bli = bli
+        self.tli = tli
         self.num_relations = num_relations
         self.relation_to_id = relation_to_id
         self.id_to_relation = {value: key for key,
@@ -58,7 +60,7 @@ class SelfMaskingModel(pl.LightningModule):
 
         # load parameters to be pruned
         self.parameters_tobe_pruned = tuple()
-        self.get_parameters_tobe_pruned()
+        self.get_parameters_tobe_pruned(bli, tli)
 
         # create corresponding pruning mask matrics for each module and for each relation
         self.pruning_mask_generators = []
@@ -69,26 +71,29 @@ class SelfMaskingModel(pl.LightningModule):
         self.orig_state_dict = deepcopy(
             self.pretrained_language_model.state_dict())
 
-    def get_parameters_tobe_pruned(self):
+    def get_parameters_tobe_pruned(self, bli, tli):
         if len(self.parameters_tobe_pruned) > 0:
             return
-        num_layer = len(self.pretrained_language_model.bert.encoder.layer)
         parameters_tobe_pruned = []
-        # TODO: make it more general
-        bert = self.pretrained_language_model.bert
-        for i in range(num_layer):
+        if 'roberta' in self.model_name:
+            layers = self.pretrained_language_model.roberta.encoder.layer
+        elif 'distil' in self.model_name:
+            layers = self.pretrained_language_model.distilbert.transformer.layer
+        else:
+            layers = self.pretrained_language_model.bert.encoder.layer
+        for i in range(bli, tli+1):
             parameters_tobe_pruned.append(
-                (bert.encoder.layer[i].attention.self.query, 'weight'))
+                (layers[i].attention.self.query, 'weight'))
             parameters_tobe_pruned.append(
-                (bert.encoder.layer[i].attention.self.key, 'weight'))
+                (layers[i].attention.self.key, 'weight'))
             parameters_tobe_pruned.append(
-                (bert.encoder.layer[i].attention.self.value, 'weight'))
+                (layers[i].attention.self.value, 'weight'))
             parameters_tobe_pruned.append(
-                (bert.encoder.layer[i].attention.output.dense, 'weight'))
+                (layers[i].attention.output.dense, 'weight'))
             parameters_tobe_pruned.append(
-                (bert.encoder.layer[i].intermediate.dense, 'weight'))
+                (layers[i].intermediate.dense, 'weight'))
             parameters_tobe_pruned.append(
-                (bert.encoder.layer[i].output.dense, 'weight'))
+                (layers[i].output.dense, 'weight'))
         self.parameters_tobe_pruned = tuple(parameters_tobe_pruned)
 
     def create_pruning_mask_matrices(self):

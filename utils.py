@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-10-30 22:18:56
-LastEditTime: 2020-11-03 10:42:35
+LastEditTime: 2020-11-03 17:21:11
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/utils.py
@@ -29,6 +29,7 @@ class FoobarPruning(prune.BasePruningMethod):
     def compute_mask(self, t, default_mask):
         """
         """
+        return default_mask
         mask = self.pre_generated_mask
         return mask
 
@@ -72,14 +73,16 @@ def freeze_parameters(model):
         p.requires_grad = False
 
 
-def bernoulli_hard_sampler(probs):
+def bernoulli_hard_sampler(probs, require_logprob: bool = True):
     """
     Hard sampler for bernoulli distribution
     """
     Bernoulli_Sampler = Bernoulli(probs=probs)
     sample = Bernoulli_Sampler.sample()
-    log_probs_of_sample = Bernoulli_Sampler.log_prob(sample)
-    return sample, log_probs_of_sample
+    if require_logprob:
+        log_probs_of_sample = Bernoulli_Sampler.log_prob(sample)
+        return sample, log_probs_of_sample
+    return sample
 
 
 def bernoulli_soft_sampler(logits, temperature: float = 0.1):

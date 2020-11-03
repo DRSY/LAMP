@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-11-01 11:16:54
-LastEditTime: 2020-11-03 10:11:28
+LastEditTime: 2020-11-03 16:40:02
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/config.py
@@ -46,6 +46,10 @@ def get_args():
     parser.add_argument('--device', type=str, default='cuda:3', help="gpu id")
     parser.add_argument('--test', action='store_true', default=False,
                         help="whether trigger test utility rather than official training")
+    parser.add_argument('--soft_infer', action='store_true',
+                        default=False, help="")
+    parser.add_argument('--bottom_layer_index', type=int, default=0)
+    parser.add_argument('--top_layer_index', type=int, default=11)
     args = parser.parse_args()
     pprint(vars(args))
     return args

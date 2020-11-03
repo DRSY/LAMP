@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-10-30 22:18:56
-LastEditTime: 2020-11-02 22:47:31
+LastEditTime: 2020-11-03 10:42:35
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/utils.py
@@ -95,6 +95,7 @@ def bernoulli_soft_sampler(logits, temperature: float = 0.1):
 
 
 def LAMA(model, tokenizer, device, input_w_mask, topk=5):
+    model.eval()
     inputs = tokenizer(input_w_mask, return_tensors='pt')
     mask_id = inputs['input_ids'][0].tolist().index(tokenizer.mask_token_id)
     inputs.to(device)
@@ -104,7 +105,7 @@ def LAMA(model, tokenizer, device, input_w_mask, topk=5):
     _, indices = torch.topk(probs, k=topk)
     predictions = []
     for token in tokenizer.decode(indices).split(" "):
-        predictions.append(token)
+        predictions.append(token.lower())
     return predictions
 
 

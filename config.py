@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-11-01 11:16:54
-LastEditTime: 2020-11-02 23:55:49
+LastEditTime: 2020-11-03 10:11:28
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/config.py
@@ -19,6 +19,9 @@ conceptNet_path = "./data/ConceptNet/test.jsonl"
 place_of_birth_path = "./data/Google_RE/place_of_birth_test.jsonl"
 place_of_death_path = "./data/Google_RE/place_of_death_test.jsonl"
 
+MODEL_NAMES = ['bert-base-cased', 'bert-base-uncased',
+               'bert-large-uncased', 'bert-large-cased', 'roberta-base', 'roberta-large']
+
 
 def get_args():
     parser = argparse.ArgumentParser(
@@ -31,7 +34,8 @@ def get_args():
                         help="batch size", required=True)
     parser.add_argument('--data_path', type=str, default='./data/ConceptNet/test.jsonl',
                         help="path of knowledge source, ends with .jsonl")
-    parser.add_argument('--save_dir', type=str, default='./masks', help="directory to save trained pruning mask generators")
+    parser.add_argument('--save_dir', type=str, default='./masks',
+                        help="directory to save trained pruning mask generators")
     parser.add_argument('--model_name', type=str, default='bert-base-uncased', required=True,
                         help="name of pretrained language model")
     parser.add_argument('--max_length', type=int, default=20,

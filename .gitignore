@@ -2,3 +2,4 @@ data/
 masks/
 __pycache__/
 .vscode/
+train.log

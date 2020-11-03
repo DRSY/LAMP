@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-10-31 11:03:02
-LastEditTime: 2020-11-04 00:08:18
+LastEditTime: 2020-11-04 00:13:22
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/probe.py
@@ -119,27 +119,27 @@ def validate(model: SelfMaskingModel, tokenizer, device, corpus_file_path: str, 
             relation = instance['pred']
             relation_id = model.relation_to_id[relation]
             relation_specific_total[relation_id] += 1
-            # pruning_mask_generator = model.pruning_mask_generators[relation_id]
-            # hard_samples = []
-            # for pruning_mask in pruning_mask_generator:
-            #     if use_expectation:
-            #         hard_sample = torch.sigmoid(pruning_mask).to(
-            #             device)  # use the expectation values
-            #     else:
-            #         hard_sample = utils.bernoulli_hard_sampler(
-            #             torch.sigmoid(pruning_mask), require_logprob=False).to(device)  # use discrete Bernoulli variables
-            #     hard_samples.append(hard_sample)
-            # model.prune(pruning_masks=hard_samples)
-            # pruned_predictions = utils.LAMA(
-            #     model.pretrained_language_model, tokenizer, device, masked_sentences[0], topk=5)
-            # try:
-            #     pos = pruned_predictions.index(obj_label)
-            #     if pos == 0:
-            #         pruned_top1 += 1
-            #         relation_specific_p1[relation_id] += 1
-            # except ValueError:
-            #     pass
-            # model.restore()
+            pruning_mask_generator = model.pruning_mask_generators[relation_id]
+            hard_samples = []
+            for pruning_mask in pruning_mask_generator:
+                if use_expectation:
+                    hard_sample = torch.sigmoid(pruning_mask).to(
+                        device)  # use the expectation values
+                else:
+                    hard_sample = utils.bernoulli_hard_sampler(
+                        torch.sigmoid(pruning_mask), require_logprob=False).to(device)  # use discrete Bernoulli variables
+                hard_samples.append(hard_sample)
+            model.prune(pruning_masks=hard_samples)
+            pruned_predictions = utils.LAMA(
+                model.pretrained_language_model, tokenizer, device, masked_sentences[0], topk=5)
+            try:
+                pos = pruned_predictions.index(obj_label)
+                if pos == 0:
+                    pruned_top1 += 1
+                    relation_specific_p1[relation_id] += 1
+            except ValueError:
+                pass
+            model.restore()
             unpruned_predictions = utils.LAMA(
                 model.pretrained_language_model, tokenizer, device, masked_sentences[0].replace('[MASK]', tokenizer.mask_token), topk=5)
             # print(pruned_predictions)

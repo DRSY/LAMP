@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-10-31 11:03:02
-LastEditTime: 2020-11-04 20:49:18
+LastEditTime: 2020-11-04 23:41:21
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/probe.py
@@ -189,10 +189,10 @@ def probing(epoch, max_epochs, dataloader, optimizers, lr_schedulers, model, dev
             loss = model.feed_batch(input_dict, labels, relation_id, device)
             optimizer.step()
             # scheduler.step()
-            total_loss += loss
+            total_loss += loss * batch[0][i]['input_ids'].size(0)
         total_loss /= cnt
         avg_loss += total_loss
-        pbar.set_description("Epoch: [{}|{}], Iter: [{}|{}], total loss: {}".format(
+        pbar.set_description("Epoch: [{}|{}], Iter: [{}|{}], avg loss: {}".format(
             epoch, max_epochs, batch_id+1, total, total_loss))
     avg_loss /= total
     return avg_loss
@@ -288,15 +288,15 @@ if __name__ == "__main__":
 
 
 # results for unpruned models on ConceptNet subset of LAMA
-# roberta-large: 18.56
-# roberta-base: 15.51
-# bert-large-uncased: 15.13
-# bert-large-cased: 15.06
-# bert-base-uncased: 12.87
-# distilroberta-base: 12.49
-# bert-base-cased: 12.04
-# distilbert-base-uncased: 11.37
-# distilbert-base-cased: 9.82
+# roberta-large: 18.56 , loss: 43.65
+# roberta-base: 15.51, loss: 18.45
+# bert-large-uncased: 15.13, loss: 6.59
+# bert-large-cased: 15.06, loss: 6.65
+# bert-base-uncased: 12.87, loss: 6.80
+# distilroberta-base: 12.49, loss:
+# bert-base-cased: 12.04, loss: 6.97
+# distilbert-base-uncased: 11.37, loss:
+# distilbert-base-cased: 9.82, loss:
 
 
 # results for pruned models

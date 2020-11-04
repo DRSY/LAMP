@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-10-30 22:18:56
-LastEditTime: 2020-11-04 00:08:34
+LastEditTime: 2020-11-04 19:25:57
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/utils.py
@@ -138,20 +138,21 @@ def test():
 
     # testing
     bert = AutoModelForMaskedLM.from_pretrained(
-        'roberta-base', return_dict=True)
+        'bert-base-uncased', return_dict=True)
     bert.eval()
     freeze_parameters(bert)
-    init_state = copy.deepcopy(bert.state_dict())
-    tokenizer = AutoTokenizer.from_pretrained('roberta-base')
-    parameters_tobe_pruned = [
-        (bert.bert.encoder.layer[0].attention.self.query, 'bias')]
-    # prune!
-    for module, name in parameters_tobe_pruned:
-        Foobar_pruning(module, name, soft_samples[0])
+    # init_state = copy.deepcopy(bert.state_dict())
+    tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
+    # parameters_tobe_pruned = [
+    #     (bert.bert.encoder.layer[0].attention.self.query, 'bias')]
+    # # prune!
+    # for module, name in parameters_tobe_pruned:
+    #     Foobar_pruning(module, name, soft_samples[0])
 
-    text = "The capital of England is [MASK]"
-    obj_label = "London"
+    text = "The capital of England is [MASK]."
+    obj_label = "London".lower()
     input_dict = tokenizer(text, return_tensors='pt')
+    print(input_dict)
     mask_index = input_dict['input_ids'][0].tolist().index(
         tokenizer.mask_token_id)
     labels = input_dict['input_ids'].clone()
@@ -162,6 +163,7 @@ def test():
     loss = outputs.loss
     print(loss)
     print(logits.shape)
+    print(LAMA(bert, tokenizer, torch.device('cpu'), text))
 
 
 if __name__ == "__main__":

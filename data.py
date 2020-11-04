@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-11-01 11:08:20
-LastEditTime: 2020-11-02 22:40:26
+LastEditTime: 2020-11-04 19:42:08
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/data.py
@@ -65,12 +65,13 @@ class Collator(object):
         self.mask_token_id = self.tokenizer.mask_token_id
         self.max_length = max_length
         logger.info("Collator initialized")
-        logger.info("MASK token: {}, Mask token id: {}".format(self.mask_token, self.mask_token_id))
+        logger.info("MASK token: {}, Mask token id: {}".format(
+            self.mask_token, self.mask_token_id))
 
     def get_label(self, input_ids: List[int], obj_label: str):
         mask_token_index = input_ids.index(self.mask_token_id)
         labels = [-100] * len(input_ids)
-        labels[mask_token_index] = self.tokenizer.convert_tokens_to_ids([obj_label])[
+        labels[mask_token_index] = self.tokenizer.convert_tokens_to_ids([obj_label.lower()])[
             0]
         return labels
 
@@ -120,7 +121,8 @@ class Collator(object):
                     label = self.get_label(
                         batch_input_ids[i], tmp_batch_dict[relation_id]['obj_labels'][i])
                 except Exception:
-                    logger.error("Encounter exception when dealing gathering batch of data")
+                    logger.error(
+                        "Encounter exception when dealing gathering batch of data")
                     print(tmp_batch_dict[relation_id]['masked_sentences'][i])
                     exit()
                 labels.append(label)

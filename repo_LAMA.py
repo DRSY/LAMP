@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-10-30 16:29:16
-LastEditTime: 2020-11-03 19:35:20
+LastEditTime: 2020-11-04 19:18:08
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /extraction/repo_LAMA.py
@@ -24,7 +24,6 @@ from config import get_args
 def main(args):
     model_name = args.model_name
     model = AutoModelForMaskedLM.from_pretrained(model_name, return_dict=True)
-    model.to(device)
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     tokenizer_mask_token = tokenizer.mask_token
     print("Mask token for model {}: {}".format(
@@ -64,11 +63,11 @@ if __name__ == "__main__":
 
     # testing
     obj_label = "London"
-    bert = AutoModelForMaskedLM.from_pretrained('roberta-base', return_dict=True)
+    bert = AutoModelForMaskedLM.from_pretrained('bert-base-uncased', return_dict=True)
     bert.eval()
     freeze_parameters(bert)
     init_state = copy.deepcopy(bert.state_dict())
-    tokenizer = AutoTokenizer.from_pretrained('roberta-base')
+    tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
     text = "The capital of England is [MASK].".replace('[MASK]', tokenizer.mask_token)
     predictions = LAMA(bert, tokenizer, torch.device('cpu'), text, topk=10)
     pprinter.pprint(predictions)

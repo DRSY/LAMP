@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-11-01 14:14:11
-LastEditTime: 2020-11-03 20:10:43
+LastEditTime: 2020-11-04 14:48:47
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/model.py
@@ -39,8 +39,14 @@ class SelfMaskingModel(pl.LightningModule):
     """
     Main lightning module
     """
+    init_methods = {
+        'uniform': torch.nn.init.uniform_,
+        'normal': torch.nn.init.normal_,
+        'ones': torch.nn.init.ones_,
+        'zeros': torch.nn.init.zeros_,
+    }
 
-    def __init__(self, bli: int, tli: int, num_relations: int, relation_to_id: dict, model_name: str, lr: float) -> None:
+    def __init__(self, bli: int, tli: int, num_relations: int, relation_to_id: dict, model_name: str, lr: float, init_method: str) -> None:
         super().__init__()
         self.save_hyperparameters()
         self.bli = bli
@@ -64,7 +70,7 @@ class SelfMaskingModel(pl.LightningModule):
         # create corresponding pruning mask matrics for each module and for each relation
         self.pruning_mask_generators = []
         self.create_pruning_mask_matrices()
-        self.init_pruning_masks(torch.nn.init.uniform)
+        self.init_pruning_masks(self.init_methods[init_method])
 
         # create copy of init state
         self.orig_state_dict = deepcopy(

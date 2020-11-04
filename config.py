@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-11-01 11:16:54
-LastEditTime: 2020-11-03 20:32:09
+LastEditTime: 2020-11-04 14:48:06
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/config.py
@@ -51,6 +51,8 @@ def get_args():
                         default=False, help="")
     parser.add_argument('--bottom_layer_index', type=int, default=0)
     parser.add_argument('--top_layer_index', type=int, default=11)
+    parser.add_argument('--init_method', type=str, default='uniform', choices=[
+                        'uniform', 'normal', 'ones', 'zeros'], help="initialization method for pruning mask generators")
     args = parser.parse_args()
     if args.model_name not in MODEL_NAMES:
         raise Exception("model name {} not in predefined list: {}".format_map(

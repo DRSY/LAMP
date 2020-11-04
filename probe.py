@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-10-31 11:03:02
-LastEditTime: 2020-11-04 00:13:22
+LastEditTime: 2020-11-04 19:39:33
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/probe.py
@@ -113,9 +113,7 @@ def validate(model: SelfMaskingModel, tokenizer, device, corpus_file_path: str, 
                 pass
         else:
             masked_sentences = instance['masked_sentences']
-            # masked_sentences = ['The capital of England is [MASK].']
             obj_label = instance['obj_label'].lower()
-            # obj_label = 'London'.lower()
             relation = instance['pred']
             relation_id = model.relation_to_id[relation]
             relation_specific_total[relation_id] += 1
@@ -183,14 +181,14 @@ def probing(epoch, max_epochs, dataloader, optimizers, lr_schedulers, model, dev
         for i in range(len(batch[-1])):
             relation_id = batch[-1][i]
             optimizer = optimizers[relation_id]
-            scheduler = lr_schedulers[relation_id]
+            # scheduler = lr_schedulers[relation_id]
             optimizer.zero_grad()
             input_dict = batch[0][i].to(device)
             labels = batch[1][i].to(device)
             cnt += batch[0][i]['input_ids'].size(0)
             loss = model.feed_batch(input_dict, labels, relation_id, device)
             optimizer.step()
-            scheduler.step()
+            # scheduler.step()
             total_loss += loss
         total_loss /= cnt
         avg_loss += total_loss
@@ -220,7 +218,7 @@ def main(args):
     logger.info("Bottom Layer Index: {}".format(args.bottom_layer_index))
     logger.info("Top Layer Index: {}".format(args.top_layer_index))
     pl_model = SelfMaskingModel(args.bottom_layer_index, args.top_layer_index,
-                                len(dataset.relation_to_id), dataset.relation_to_id, args.model_name, args.lr)
+                                len(dataset.relation_to_id), dataset.relation_to_id, args.model_name, args.lr, init_method=args.init_method)
     pl_model.to(device)
     pl_model.pretrained_language_model.eval()
     freeze_parameters(pl_model.pretrained_language_model)
@@ -235,6 +233,19 @@ def main(args):
             optimizer, args.warmup*max_steps, max_steps)
         optimizers.append(optimizer)
         schedulers.append(scheduler)
+
+    # logger.info("Start validation!")
+    # ret_dict = validate(
+    #     pl_model, collator.tokenizer, device, args.data_path, len(dataset), args.soft_infer)
+    # logger.info("Finish validation!")
+    # print("Metrics:")
+    # tb = pt.PrettyTable()
+    # tb.field_names = ['Model Name', 'Macro-P@1-pruned',
+    #                     'Macro-P@1-unpruned', 'Micro-P@1-pruned', 'Micro-P@1-unpruned']
+    # tb.add_row([args.model_name, ret_dict['macro_pruned_p1'], ret_dict['macro_unpruned_p1'],
+    #             ret_dict['micro_pruned_p1'], ret_dict['micro_unpruned_p1']])
+    # print(tb)
+    # exit()
 
     # probe!
     best_macro_pruned_p1 = 0
@@ -276,7 +287,7 @@ if __name__ == "__main__":
         main(args)
 
 
-# results for unpruned models
+# results for unpruned models on ConceptNet subset of LAMA
 # roberta-large: 18.56
 # roberta-base: 15.51
 # bert-large-uncased: 15.13
@@ -289,12 +300,12 @@ if __name__ == "__main__":
 
 
 # results for pruned models
-# bert-base-cased: 
-# bert-base-uncased: 
-# bert-large-cased: 
-# bert-large-uncased: 
-# roberta-base: 
-# roberta-large: 
+# bert-base-cased:
+# bert-base-uncased:
+# bert-large-cased:
+# bert-large-uncased:
+# roberta-base:
+# roberta-large:
 # distilroberta-base
 # distilbert-base-cased:
 # distilbert-base-uncased:

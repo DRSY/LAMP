@@ -1,9 +1,10 @@
 bert-base-uncased
 0.2
-3
-5e-5
+2
+3e-4
 32
 4
 0.1
-0
-2
+8
+11
+normal

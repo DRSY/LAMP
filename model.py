@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-11-01 14:14:11
-LastEditTime: 2020-11-04 14:48:47
+LastEditTime: 2020-11-04 20:21:56
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/model.py
@@ -14,6 +14,7 @@ import pytorch_lightning as pl
 import torch
 import torch.nn as nn
 import torch.nn.utils.prune as prune
+from torch.nn.utils.clip_grad import clip_grad_norm_
 import torch.optim as optim
 from transformers import (AutoModelForMaskedLM, AutoTokenizer,
                           get_linear_schedule_with_warmup)
@@ -190,6 +191,7 @@ class SelfMaskingModel(pl.LightningModule):
         # feed input batch and backward loss
         loss = self(input_dict, labels)
         loss.backward()
+        clip_grad_norm_(pruning_masks_logits, max_norm=5)
         self.restore()
         return loss.detach().item()
 

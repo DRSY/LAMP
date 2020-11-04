@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-10-31 11:03:02
-LastEditTime: 2020-11-04 19:39:33
+LastEditTime: 2020-11-04 20:49:18
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/probe.py
@@ -61,7 +61,7 @@ def test_pl(args):
         linear_warmup_decay_scheduler.step()
         exit()
 
-
+@torch.no_grad()
 def validate(model: SelfMaskingModel, tokenizer, device, corpus_file_path: str, total: int, use_expectation: bool = True):
     """
     validate pruning masks on LAMA dataset

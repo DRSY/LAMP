@@ -1,7 +1,7 @@
 <!--
  * @Author: your name
  * @Date: 2020-10-31 00:05:34
- * @LastEditTime: 2020-11-03 14:53:38
+ * @LastEditTime: 2020-11-04 23:58:05
  * @LastEditors: Please set LastEditors
  * @Description: In User Settings EditUse 
  * @FilePath: /LAMA/README.md
@@ -18,3 +18,4 @@ Or specify parameters in commandline:
 ```bash
 ./probe.sh
 ```
+detailed hyperparameters can be found in **probe.sh**.

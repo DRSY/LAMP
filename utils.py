@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-10-30 22:18:56
-LastEditTime: 2020-11-04 19:25:57
+LastEditTime: 2020-11-05 11:30:19
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/utils.py
@@ -12,8 +12,10 @@ import torch
 import torch.nn as nn
 import torch.nn.utils.prune as prune
 from torch.distributions import Bernoulli
+import jsonlines
 
 from typing import List, Dict
+from tqdm import tqdm
 
 
 class FoobarPruning(prune.BasePruningMethod):
@@ -126,44 +128,56 @@ def save_pruning_masks_generators(model_name: str, pruning_masks_generators: Lis
 
 
 def test():
-    model = nn.Sequential(nn.Linear(32, 32), nn.ReLU(), nn.Linear(32, 768))
-    model.train()
-    inputs = torch.randn(12, 32)
-    pruning_mask_logits = model(inputs)
-    assert pruning_mask_logits.requires_grad == True
-    pruning_mask_probs = torch.sigmoid(pruning_mask_logits)
-    soft_samples = bernoulli_soft_sampler(pruning_mask_logits, temperature=0.1)
-    hard_samples, log_probs = bernoulli_hard_sampler(pruning_mask_probs)
-    assert soft_samples.requires_grad == True, "no grad associated with soft samples"
+    bert_name = 'bert-base-uncased'
+    device = torch.device('cuda:2')
+    # masks = torch.nn.Parameter(torch.empty(768, 768))
+    # opt = torch.optim.Adam(masks, lr=3e-4)
+    # opt.zero_grad()
+    # torch.nn.init.zeros_(masks)
+    # soft_samples = bernoulli_soft_sampler(masks, temperature=0.1)
+    # assert soft_samples.requires_grad == True, "no grad associated with soft samples"
 
     # testing
     bert = AutoModelForMaskedLM.from_pretrained(
-        'bert-base-uncased', return_dict=True)
+        bert_name, return_dict=True).to(device)
     bert.eval()
     freeze_parameters(bert)
     # init_state = copy.deepcopy(bert.state_dict())
-    tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
+    tokenizer = AutoTokenizer.from_pretrained(bert_name)
+    print(tokenizer.mask_token_id)
     # parameters_tobe_pruned = [
     #     (bert.bert.encoder.layer[0].attention.self.query, 'bias')]
-    # # prune!
+    # # prune
     # for module, name in parameters_tobe_pruned:
     #     Foobar_pruning(module, name, soft_samples[0])
 
-    text = "The capital of England is [MASK]."
-    obj_label = "London".lower()
-    input_dict = tokenizer(text, return_tensors='pt')
-    print(input_dict)
-    mask_index = input_dict['input_ids'][0].tolist().index(
-        tokenizer.mask_token_id)
-    labels = input_dict['input_ids'].clone()
-    labels.fill_(-100)
-    labels[0, mask_index] = tokenizer.convert_tokens_to_ids([obj_label])[0]
-    outputs = bert(**input_dict, labels=labels)
-    logits = outputs.logits
-    loss = outputs.loss
-    print(loss)
-    print(logits.shape)
-    print(LAMA(bert, tokenizer, torch.device('cpu'), text))
+    corpus_fileobj = open("./data/ConceptNet/test.jsonl",
+                          mode='r', encoding='utf-8')
+    total_loss = .0
+    cnt = 0
+    for instance in jsonlines.Reader(corpus_fileobj):
+        cnt += 1
+        text = instance['masked_sentences'][0].replace(
+            '[MASK]', tokenizer.mask_token)
+        obj_label = instance['obj_label'].lower()
+        input_dict = tokenizer(text, return_tensors='pt').to(device)
+        mask_index = input_dict['input_ids'][0].tolist().index(
+            tokenizer.mask_token_id)
+        labels = input_dict['input_ids'].clone().to(device)
+        labels.fill_(-100)
+        labels[0, mask_index] = tokenizer.convert_tokens_to_ids([obj_label])[0]
+        outputs = bert(**input_dict, labels=labels)
+        logits = outputs.logits
+        loss = outputs.loss
+        # if loss.item() <= 2.2:
+        #     print(text)
+        #     print(obj_label)
+        #     print(LAMA(bert, tokenizer, device, text))
+        #     exit()
+        print(loss)
+        total_loss += loss.detach().item()
+        # print(LAMA(bert, tokenizer, torch.device('cpu'), text))
+    print(total_loss / cnt)
 
 
 if __name__ == "__main__":

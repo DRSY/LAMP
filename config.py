@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-11-01 11:16:54
-LastEditTime: 2020-11-04 14:48:06
+LastEditTime: 2020-11-05 10:01:00
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/config.py
@@ -52,7 +52,7 @@ def get_args():
     parser.add_argument('--bottom_layer_index', type=int, default=0)
     parser.add_argument('--top_layer_index', type=int, default=11)
     parser.add_argument('--init_method', type=str, default='uniform', choices=[
-                        'uniform', 'normal', 'ones', 'zeros'], help="initialization method for pruning mask generators")
+                        'uniform', 'normal', 'ones', 'zeros', '2.95'], help="initialization method for pruning mask generators which determine the initial sparsity of pruning masks")
     args = parser.parse_args()
     if args.model_name not in MODEL_NAMES:
         raise Exception("model name {} not in predefined list: {}".format_map(

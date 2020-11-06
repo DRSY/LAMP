@@ -1,12 +1,12 @@
 <!--
  * @Author: your name
  * @Date: 2020-10-31 00:05:34
- * @LastEditTime: 2020-11-05 22:19:23
+ * @LastEditTime: 2020-11-06 10:49:44
  * @LastEditors: Please set LastEditors
  * @Description: In User Settings EditUse 
  * @FilePath: /LAMA/README.md
 -->
-# Knowledge-aware Stocastic Pruning for Pretrained Language Model
+# On Redundency and Lottery Tickets in Pre-trained Language Model via Explicit Knowledge-Aware Stocastic Pruning
 
 ## Run
 Specify parameters in a separate **params** file:

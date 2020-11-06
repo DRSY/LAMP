@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-10-31 11:03:02
-LastEditTime: 2020-11-04 23:41:21
+LastEditTime: 2020-11-06 14:07:27
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/probe.py
@@ -61,6 +61,7 @@ def test_pl(args):
         linear_warmup_decay_scheduler.step()
         exit()
 
+
 @torch.no_grad()
 def validate(model: SelfMaskingModel, tokenizer, device, corpus_file_path: str, total: int, use_expectation: bool = True):
     """
@@ -69,8 +70,12 @@ def validate(model: SelfMaskingModel, tokenizer, device, corpus_file_path: str, 
     corpus_fileobj = open(corpus_file_path, mode='r', encoding='utf-8')
     num_relations = len(model.pruning_mask_generators)
     relation_specific_p1 = [.0] * num_relations
+    relation_specific_p2 = [.0] * num_relations
+    relation_specific_p3 = [.0] * num_relations
     relation_specific_total = [0] * num_relations
     relation_specific_unpruned_p1 = [.0] * num_relations
+    relation_specific_unpruned_p2 = [.0] * num_relations
+    relation_specific_unpruned_p3 = [.0] * num_relations
     pruned_p1 = .0
     pruned_top1 = 0
     unpruned_p1 = .0
@@ -135,6 +140,10 @@ def validate(model: SelfMaskingModel, tokenizer, device, corpus_file_path: str, 
                 if pos == 0:
                     pruned_top1 += 1
                     relation_specific_p1[relation_id] += 1
+                elif pos == 1:
+                    relation_specific_p2[relation_id] += 1
+                elif pos == 2:
+                    relation_specific_p3[relation_id] += 1
             except ValueError:
                 pass
             model.restore()
@@ -147,6 +156,10 @@ def validate(model: SelfMaskingModel, tokenizer, device, corpus_file_path: str, 
                 if pos == 0:
                     unpruned_top1 += 1
                     relation_specific_unpruned_p1[relation_id] += 1
+                elif pos == 1:
+                    relation_specific_unpruned_p2[relation_id] += 1
+                elif pos == 2:
+                    relation_specific_unpruned_p3[relation_id] += 1
             except ValueError:
                 pass
     # macro-average
@@ -157,7 +170,15 @@ def validate(model: SelfMaskingModel, tokenizer, device, corpus_file_path: str, 
     for i in range(num_relations):
         relation_specific_p1[i] = relation_specific_p1[i] / \
             relation_specific_total[i]
+        relation_specific_p2[i] = relation_specific_p2[i] / \
+            relation_specific_total[i]
+        relation_specific_p3[i] = relation_specific_p3[i] / \
+            relation_specific_total[i]
         relation_specific_unpruned_p1[i] = relation_specific_unpruned_p1[i] / \
+            relation_specific_total[i]
+        relation_specific_unpruned_p2[i] = relation_specific_unpruned_p2[i] / \
+            relation_specific_total[i]
+        relation_specific_unpruned_p3[i] = relation_specific_unpruned_p3[i] / \
             relation_specific_total[i]
 
     corpus_fileobj.close()
@@ -166,10 +187,17 @@ def validate(model: SelfMaskingModel, tokenizer, device, corpus_file_path: str, 
     ret_dict['macro_unpruned_p1'] = unpruned_p1
     ret_dict['micro_pruned_p1'] = sum(
         relation_specific_p1) / len(relation_specific_p1)
+    ret_dict['micro_pruned_p2'] = sum(
+        relation_specific_p2) / len(relation_specific_p2)
+    ret_dict['micro_pruned_p3'] = sum(
+        relation_specific_p3) / len(relation_specific_p3)
     ret_dict['micro_unpruned_p1'] = sum(
         relation_specific_unpruned_p1) / len(relation_specific_unpruned_p1)
+    ret_dict['micro_unpruned_p2'] = sum(
+        relation_specific_unpruned_p2) / len(relation_specific_unpruned_p2)
+    ret_dict['micro_unpruned_p3'] = sum(
+        relation_specific_unpruned_p3) / len(relation_specific_unpruned_p3)
     return ret_dict
-
 
 def probing(epoch, max_epochs, dataloader, optimizers, lr_schedulers, model, device):
     total = len(dataloader)
@@ -181,14 +209,14 @@ def probing(epoch, max_epochs, dataloader, optimizers, lr_schedulers, model, dev
         for i in range(len(batch[-1])):
             relation_id = batch[-1][i]
             optimizer = optimizers[relation_id]
-            # scheduler = lr_schedulers[relation_id]
+            scheduler = lr_schedulers[relation_id]
             optimizer.zero_grad()
             input_dict = batch[0][i].to(device)
             labels = batch[1][i].to(device)
             cnt += batch[0][i]['input_ids'].size(0)
             loss = model.feed_batch(input_dict, labels, relation_id, device)
             optimizer.step()
-            # scheduler.step()
+            scheduler.step()
             total_loss += loss * batch[0][i]['input_ids'].size(0)
         total_loss /= cnt
         avg_loss += total_loss
@@ -241,9 +269,9 @@ def main(args):
     # print("Metrics:")
     # tb = pt.PrettyTable()
     # tb.field_names = ['Model Name', 'Macro-P@1-pruned',
-    #                     'Macro-P@1-unpruned', 'Micro-P@1-pruned', 'Micro-P@1-unpruned']
+    #                     'Macro-P@1-unpruned', 'Micro-P@1-pruned', 'Micro-P@1-unpruned', 'Micro-P@2-pruned', 'Micro-P@2-unpruned', 'Micro-P@3-pruned', 'Micro-P@3-unpruned']
     # tb.add_row([args.model_name, ret_dict['macro_pruned_p1'], ret_dict['macro_unpruned_p1'],
-    #             ret_dict['micro_pruned_p1'], ret_dict['micro_unpruned_p1']])
+    #             ret_dict['micro_pruned_p1'], ret_dict['micro_unpruned_p1'], ret_dict['micro_pruned_p2'], ret_dict['micro_unpruned_p2'], ret_dict['micro_pruned_p3'], ret_dict['micro_unpruned_p3']])
     # print(tb)
     # exit()
 
@@ -252,6 +280,8 @@ def main(args):
     best_micro_pruned_p1 = 0
     logger.info(
         "Start to train pruning mask generators using soft approximation")
+    logger.info(
+        "hard binary mask in inference" if not args.soft_infer else "soft mask in inference")
     for e in range(args.max_epochs):
         loss = probing(e+1, args.max_epochs, dataloader, optimizers,
                        schedulers, pl_model, device)
@@ -264,16 +294,16 @@ def main(args):
         print("Metrics:")
         tb = pt.PrettyTable()
         tb.field_names = ['Model Name', 'Macro-P@1-pruned',
-                          'Macro-P@1-unpruned', 'Micro-P@1-pruned', 'Micro-P@1-unpruned']
+                          'Macro-P@1-unpruned', 'Micro-P@1-pruned', 'Micro-P@1-unpruned', 'Micro-P@2-pruned', 'Micro-P@2-unpruned', 'Micro-P@3-pruned', 'Micro-P@3-unpruned']
         tb.add_row([args.model_name, ret_dict['macro_pruned_p1'], ret_dict['macro_unpruned_p1'],
-                    ret_dict['micro_pruned_p1'], ret_dict['micro_unpruned_p1']])
+                    ret_dict['micro_pruned_p1'], ret_dict['micro_unpruned_p1'], ret_dict['micro_pruned_p2'], ret_dict['micro_unpruned_p2'], ret_dict['micro_pruned_p3'], ret_dict['micro_unpruned_p3']])
         print(tb)
         if ret_dict['macro_pruned_p1'] > best_macro_pruned_p1 or ret_dict['micro_pruned_p1'] > best_micro_pruned_p1:
             if ret_dict['macro_pruned_p1'] > best_macro_pruned_p1:
                 best_macro_pruned_p1 = ret_dict['macro_pruned_p1']
             if ret_dict['micro_pruned_p1'] > best_micro_pruned_p1:
                 best_micro_pruned_p1 = ret_dict['micro_pruned_p1']
-            utils.save_pruning_masks_generators(
+            utils.save_pruning_masks_generators(args, 
                 args.model_name, pl_model.pruning_mask_generators, pl_model.id_to_relation, args.save_dir)
             logger.info(
                 "New best pruned P@1 observed, pruning mask generators saved!")
@@ -292,11 +322,11 @@ if __name__ == "__main__":
 # roberta-base: 15.51, loss: 18.45
 # bert-large-uncased: 15.13, loss: 6.59
 # bert-large-cased: 15.06, loss: 6.65
-# bert-base-uncased: 12.87, loss: 6.80
-# distilroberta-base: 12.49, loss:
+# bert-base-uncased: 12.84, loss: 6.80
+# distilroberta-base: 12.49, loss: 18.47
 # bert-base-cased: 12.04, loss: 6.97
-# distilbert-base-uncased: 11.37, loss:
-# distilbert-base-cased: 9.82, loss:
+# distilbert-base-uncased: 11.37, loss: 6.77
+# distilbert-base-cased: 9.82, loss: 7.02
 
 
 # results for pruned models

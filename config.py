@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-11-01 11:16:54
-LastEditTime: 2020-11-06 16:16:28
+LastEditTime: 2020-11-06 21:39:08
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/config.py
@@ -48,11 +48,11 @@ def get_args():
     parser.add_argument('--test', action='store_true', default=False,
                         help="whether trigger test utility rather than official training")
     parser.add_argument('--soft_infer', action='store_true',
-                        default=False, help="")
+                        default=False, help="whether use soft mask or hard binary mask during inference")
     parser.add_argument('--bottom_layer_index', type=int, default=0)
     parser.add_argument('--top_layer_index', type=int, default=11)
     parser.add_argument('--init_method', type=str, default='uniform', choices=[
-                        'uniform', 'normal', 'ones', 'zeros', '2.95', '2.75', '1.38'], help="initialization method for pruning mask generators which determine the initial sparsity of pruning masks")
+                        'uniform', 'normal', 'ones', 'zeros', '2.95', '2.75', '1.38', '0.85'], help="initialization method for pruning mask generators which determine the initial sparsity of pruning masks")
     args = parser.parse_args()
     if args.model_name not in MODEL_NAMES:
         raise Exception("model name {} not in predefined list: {}".format_map(

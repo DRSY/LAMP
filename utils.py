@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-10-30 22:18:56
-LastEditTime: 2020-11-06 09:57:25
+LastEditTime: 2020-11-07 10:30:37
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/utils.py
@@ -121,17 +121,33 @@ def save_pruning_masks_generators(args, model_name: str, pruning_masks_generator
     for i in range(len(id_to_relation)):
         relation_str = id_to_relation[i]
         file_prefix = "{}/{}_{}_{}_{}_{}_init>{}.pickle".format(save_dir,
-                                                  model_name, relation_str, len(pruning_masks_generators[i]), args.bottom_layer_index, args.top_layer_index, args.init_method)
+                                                                model_name, relation_str, len(pruning_masks_generators[i]), args.bottom_layer_index, args.top_layer_index, args.init_method)
         with open(file_prefix, mode='wb') as f:
             torch.save(pruning_masks_generators[i], f)
         print("Pruning mask generators for {} is saved at {}".format(
             relation_str, file_prefix))
 
 
+def sparsity(model):
+    # sparsity
+    sparsities = dict()
+    id_to_relation = model.id_to_relation
+    for i in range(len(model.pruning_mask_generators)):
+        total_cnt = 0
+        cnt = 0
+        pruning_masks = model.pruning_mask_generators[i]
+        for p in pruning_masks:
+            bernoulli_p = torch.sigmoid(p.data)
+            bernoulli_p = bernoulli_p < 0.5
+            cnt = bernoulli_p.int().sum().item()
+            total_cnt += p.nelement()
+        sparsities[id_to_relation[i]] = cnt / total_cnt
+    return sparsities
+
 
 def test():
     bert_name = 'bert-base-uncased'
-    device = torch.device('cuda:2')
+    device = torch.device('cuda:0')
     # masks = torch.nn.Parameter(torch.empty(768, 768))
     # opt = torch.optim.Adam(masks, lr=3e-4)
     # opt.zero_grad()
@@ -147,11 +163,26 @@ def test():
     # init_state = copy.deepcopy(bert.state_dict())
     tokenizer = AutoTokenizer.from_pretrained(bert_name)
     print(tokenizer.mask_token_id)
-    # parameters_tobe_pruned = [
-    #     (bert.bert.encoder.layer[0].attention.self.query, 'bias')]
+    parameters_tobe_pruned = []
+    for i in range(8, 12):
+        parameters_tobe_pruned.append(
+            (bert.bert.encoder.layer[i].attention.self.query, 'weight'))
+        parameters_tobe_pruned.append(
+            (bert.bert.encoder.layer[i].attention.self.key, 'weight'))
+        parameters_tobe_pruned.append(
+            (bert.bert.encoder.layer[i].attention.self.value, 'weight'))
+        parameters_tobe_pruned.append(
+            (bert.bert.encoder.layer[i].attention.output.dense, 'weight'))
+        parameters_tobe_pruned.append(
+            (bert.bert.encoder.layer[i].intermediate.dense, 'weight'))
+        parameters_tobe_pruned.append(
+            (bert.bert.encoder.layer[i].output.dense, 'weight'))
+    parameters_tobe_pruned = tuple(parameters_tobe_pruned)
     # # prune
-    # for module, name in parameters_tobe_pruned:
-    #     Foobar_pruning(module, name, soft_samples[0])
+    for module, name in parameters_tobe_pruned:
+        prune.random_unstructured(module, name, amount=0.30)
+        # Foobar_pruning(module, name, soft_samples[0])
+    print(sparsity(bert))
 
     corpus_fileobj = open("./data/ConceptNet/test.jsonl",
                           mode='r', encoding='utf-8')
@@ -176,7 +207,8 @@ def test():
         #     print(obj_label)
         #     print(LAMA(bert, tokenizer, device, text))
         #     exit()
-        print(loss)
+        # print(loss)
+        print(cnt)
         total_loss += loss.detach().item()
         # print(LAMA(bert, tokenizer, torch.device('cpu'), text))
     print(total_loss / cnt)

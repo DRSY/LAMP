@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-11-01 11:16:54
-LastEditTime: 2020-11-06 21:39:08
+LastEditTime: 2020-11-07 17:02:41
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/config.py
@@ -21,7 +21,7 @@ place_of_death_path = "./data/Google_RE/place_of_death_test.jsonl"
 
 # allowed models
 MODEL_NAMES = ['bert-base-cased', 'bert-base-uncased', 'distilbert-base-cased', 'distilbert-base-uncased', 'distilroberta-base',
-               'bert-large-uncased', 'bert-large-cased', 'roberta-base', 'roberta-large']
+               'bert-large-uncased', 'bert-large-cased', 'roberta-base', 'roberta-large', 'albert-base-v2', 'albert-large-v2']
 
 
 def get_args():

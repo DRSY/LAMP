@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-10-30 22:18:56
-LastEditTime: 2020-11-07 10:30:37
+LastEditTime: 2020-11-08 11:40:19
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/utils.py
@@ -128,8 +128,10 @@ def save_pruning_masks_generators(args, model_name: str, pruning_masks_generator
             relation_str, file_prefix))
 
 
-def sparsity(model):
+def sparsity(model, init_method: str):
     # sparsity
+    v = float(init_method)
+    threshold = torch.sigmoid(v).item()
     sparsities = dict()
     id_to_relation = model.id_to_relation
     for i in range(len(model.pruning_mask_generators)):
@@ -138,7 +140,7 @@ def sparsity(model):
         pruning_masks = model.pruning_mask_generators[i]
         for p in pruning_masks:
             bernoulli_p = torch.sigmoid(p.data)
-            bernoulli_p = bernoulli_p < 0.5
+            bernoulli_p = bernoulli_p < threshold
             cnt = bernoulli_p.int().sum().item()
             total_cnt += p.nelement()
         sparsities[id_to_relation[i]] = cnt / total_cnt

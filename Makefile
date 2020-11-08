@@ -1,3 +1,5 @@
+.PHONY: run test clean
+
 run:
 	./probe.sh < params
 

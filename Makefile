@@ -1,6 +1,6 @@
 .PHONY: run test clean glue
 
-run:
+probe:
 	./probe.sh < params
 
 glue:

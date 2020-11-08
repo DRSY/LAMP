@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-11-01 14:14:11
-LastEditTime: 2020-11-06 22:15:04
+LastEditTime: 2020-11-08 09:57:19
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/model.py
@@ -45,6 +45,8 @@ class SelfMaskingModel(pl.LightningModule):
         'uniform': torch.nn.init.uniform_,
         'normal': torch.nn.init.normal_,
         'zeros': torch.nn.init.zeros_, # 50 % initial sparsity
+        '0.41': partial(torch.nn.init.constant_, val=0.41), # 40% initial sparsity
+        '0.62': partial(torch.nn.init.constant_, val=0.62), # 35% initial sparsity
         '0.85': partial(torch.nn.init.constant_, val=0.85), # 30% initial sparsity
         'ones': torch.nn.init.ones_, # 27% initial sparsity
         '1.38': partial(torch.nn.init.constant_, val=1.38), # 20% initial sparsity

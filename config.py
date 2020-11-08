@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-11-01 11:16:54
-LastEditTime: 2020-11-07 17:02:41
+LastEditTime: 2020-11-08 09:57:05
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/config.py
@@ -37,7 +37,7 @@ def get_args():
                         help="path of knowledge source, ends with .jsonl")
     parser.add_argument('--save_dir', type=str, default='./masks',
                         help="directory to save trained pruning mask generators")
-    parser.add_argument('--model_name', type=str, default='bert-base-uncased', required=True,
+    parser.add_argument('--model_name', type=str, default='bert-base-uncased', required=True, choices=MODEL_NAMES,
                         help="name of pretrained language model")
     parser.add_argument('--max_length', type=int, default=20,
                         help="max length of input cloze question")
@@ -52,7 +52,7 @@ def get_args():
     parser.add_argument('--bottom_layer_index', type=int, default=0)
     parser.add_argument('--top_layer_index', type=int, default=11)
     parser.add_argument('--init_method', type=str, default='uniform', choices=[
-                        'uniform', 'normal', 'ones', 'zeros', '2.95', '2.75', '1.38', '0.85'], help="initialization method for pruning mask generators which determine the initial sparsity of pruning masks")
+                        'uniform', 'normal', 'ones', 'zeros', '2.95', '2.75', '1.38', '0.85', '0.62', '0.41'], help="initialization method for pruning mask generators which determine the initial sparsity of pruning masks")
     args = parser.parse_args()
     if args.model_name not in MODEL_NAMES:
         raise Exception("model name {} not in predefined list: {}".format_map(

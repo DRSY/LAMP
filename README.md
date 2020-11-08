@@ -1,21 +1,33 @@
 <!--
  * @Author: your name
  * @Date: 2020-10-31 00:05:34
- * @LastEditTime: 2020-11-08 15:18:40
+ * @LastEditTime: 2020-11-08 15:24:15
  * @LastEditors: Please set LastEditors
  * @Description: In User Settings EditUse 
  * @FilePath: /LAMA/README.md
 -->
 # On Initialization for Fine-Tuning Pre-trained Language Model via Explicit Knowledge-Aware Stocastic Pruning
 
-## Run
-Specify parameters in a separate **params** file:
+## Test unpruned models(default set ot bert-base-uncased)
 ```bash
-./probe.sh < params
+make -f Makefile test
 ```
 
-Or specify parameters in commandline:
+## Run probing
+Specify parameters about probing experiments in a separate **params** file, then run:
 ```bash
-./probe.sh
+make -f Makefile probe
 ```
 detailed hyperparameters can be found in **probe.sh**.
+
+## Run GLUE
+Specify parameters about GLUE experiments in a separate **params** file, then run:
+```bash
+make -f Makefile glue
+```
+
+## Clean the log files
+```bash
+make -f Makefile clean
+```
+detailed hyperparameters can be found in **glue.sh**.

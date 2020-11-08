@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-11-01 14:14:11
-LastEditTime: 2020-11-08 09:57:19
+LastEditTime: 2020-11-08 23:23:31
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/model.py
@@ -181,6 +181,10 @@ class SelfMaskingModel(pl.LightningModule):
             prune.remove(module, name)
         restore_init_state(self.pretrained_language_model,
                            self.orig_state_dict)
+    @staticmethod 
+    def L0_loss(pruning_masks: List):
+        
+        raise NotImplementedError
 
     def feed_batch(self, input_dict, labels, relation_id: int, device):
         """
@@ -193,6 +197,29 @@ class SelfMaskingModel(pl.LightningModule):
             soft_sample = bernoulli_soft_sampler(
                 pruning_mask_logits.to(device), temperature=0.1)
             pruning_masks_soft_samples.append(soft_sample)
+        self.prune(pruning_masks=pruning_masks_soft_samples)
+
+        # feed input batch and backward loss
+        loss = self(input_dict, labels)
+        loss.backward()
+        clip_grad_norm_(pruning_masks_logits, max_norm=5)
+        self.restore()
+        return loss.detach().item()
+
+    def feed_batch_straight_through(self, input_dict, labels, relation_id: int, device):
+        """
+        feed a batch of input with the same relation
+        use hard straight through gradient estimator
+        """
+        pruning_masks_logits = self.pruning_mask_generators[relation_id]
+        pruning_masks_soft_samples = []
+        for pruning_mask_logits in pruning_masks_logits:
+            cuda_mask = pruning_mask_logits.to(device)
+            _probs = torch.sigmoid(cuda_mask)
+            _probs[_probs>0.5] = 1
+            _probs[_probs<=0.5] = 0
+            straight_through_sample = (_probs + cuda_mask).detach() - cuda_mask
+            pruning_masks_soft_samples.append(straight_through_sample)
         self.prune(pruning_masks=pruning_masks_soft_samples)
 
         # feed input batch and backward loss

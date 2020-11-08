@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-10-31 11:03:02
-LastEditTime: 2020-11-06 14:07:27
+LastEditTime: 2020-11-08 23:26:50
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/probe.py
@@ -105,6 +105,11 @@ def validate(model: SelfMaskingModel, tokenizer, device, corpus_file_path: str, 
                 pos = pruned_predictions.index(obj_label)
                 if pos == 0:
                     pruned_top1 += 1
+                    relation_specific_p1[relation_id] += 1
+                if pos in [0, 1]:
+                    relation_specific_p2[relation_id] += 1
+                if pos in [0, 1, 2]:
+                    relation_specific_p3[relation_id] += 1
             except ValueError:
                 pass
             model.restore()
@@ -114,6 +119,11 @@ def validate(model: SelfMaskingModel, tokenizer, device, corpus_file_path: str, 
                 pos = unpruned_predictions.index(obj_label)
                 if pos == 0:
                     unpruned_top1 += 1
+                    relation_specific_unpruned_p1[relation_id] += 1
+                if pos in [0, 1]:
+                    relation_specific_unpruned_p2[relation_id] += 1
+                if pos in [0, 1, 2]:
+                    relation_specific_unpruned_p3[relation_id] += 1
             except ValueError:
                 pass
         else:
@@ -129,8 +139,9 @@ def validate(model: SelfMaskingModel, tokenizer, device, corpus_file_path: str, 
                     hard_sample = torch.sigmoid(pruning_mask).to(
                         device)  # use the expectation values
                 else:
-                    hard_sample = utils.bernoulli_hard_sampler(
-                        torch.sigmoid(pruning_mask), require_logprob=False).to(device)  # use discrete Bernoulli variables
+                    hard_sample = torch.sigmoid(pruning_mask).to(device)
+                    hard_sample[hard_sample>0.5] = 1
+                    hard_sample[hard_sample<=0.5] = 0
                 hard_samples.append(hard_sample)
             model.prune(pruning_masks=hard_samples)
             pruned_predictions = utils.LAMA(
@@ -140,9 +151,9 @@ def validate(model: SelfMaskingModel, tokenizer, device, corpus_file_path: str, 
                 if pos == 0:
                     pruned_top1 += 1
                     relation_specific_p1[relation_id] += 1
-                elif pos == 1:
+                if pos in [0, 1]:
                     relation_specific_p2[relation_id] += 1
-                elif pos == 2:
+                if pos in [0, 1, 2]:
                     relation_specific_p3[relation_id] += 1
             except ValueError:
                 pass
@@ -156,12 +167,15 @@ def validate(model: SelfMaskingModel, tokenizer, device, corpus_file_path: str, 
                 if pos == 0:
                     unpruned_top1 += 1
                     relation_specific_unpruned_p1[relation_id] += 1
-                elif pos == 1:
+                if pos in [0, 1]:
                     relation_specific_unpruned_p2[relation_id] += 1
-                elif pos == 2:
+                if pos in [0, 1, 2]:
                     relation_specific_unpruned_p3[relation_id] += 1
             except ValueError:
                 pass
+    # sparsity
+    sparsity_dict = utils.sparsity(model, args.init_method)
+
     # macro-average
     pruned_p1 = pruned_top1 / total
     unpruned_p1 = unpruned_top1 / total
@@ -197,7 +211,9 @@ def validate(model: SelfMaskingModel, tokenizer, device, corpus_file_path: str, 
         relation_specific_unpruned_p2) / len(relation_specific_unpruned_p2)
     ret_dict['micro_unpruned_p3'] = sum(
         relation_specific_unpruned_p3) / len(relation_specific_unpruned_p3)
+    ret_dict['sparsity'] = sparsity_dict
     return ret_dict
+
 
 def probing(epoch, max_epochs, dataloader, optimizers, lr_schedulers, model, device):
     total = len(dataloader)
@@ -298,13 +314,14 @@ def main(args):
         tb.add_row([args.model_name, ret_dict['macro_pruned_p1'], ret_dict['macro_unpruned_p1'],
                     ret_dict['micro_pruned_p1'], ret_dict['micro_unpruned_p1'], ret_dict['micro_pruned_p2'], ret_dict['micro_unpruned_p2'], ret_dict['micro_pruned_p3'], ret_dict['micro_unpruned_p3']])
         print(tb)
+        pprint(ret_dict['sparsity'])
         if ret_dict['macro_pruned_p1'] > best_macro_pruned_p1 or ret_dict['micro_pruned_p1'] > best_micro_pruned_p1:
             if ret_dict['macro_pruned_p1'] > best_macro_pruned_p1:
                 best_macro_pruned_p1 = ret_dict['macro_pruned_p1']
             if ret_dict['micro_pruned_p1'] > best_micro_pruned_p1:
                 best_micro_pruned_p1 = ret_dict['micro_pruned_p1']
-            utils.save_pruning_masks_generators(args, 
-                args.model_name, pl_model.pruning_mask_generators, pl_model.id_to_relation, args.save_dir)
+            utils.save_pruning_masks_generators(args,
+                                                args.model_name, pl_model.pruning_mask_generators, pl_model.id_to_relation, args.save_dir)
             logger.info(
                 "New best pruned P@1 observed, pruning mask generators saved!")
 
@@ -318,6 +335,7 @@ if __name__ == "__main__":
 
 
 # results for unpruned models on ConceptNet subset of LAMA
+
 # roberta-large: 18.56 , loss: 43.65
 # roberta-base: 15.51, loss: 18.45
 # bert-large-uncased: 15.13, loss: 6.59

@@ -1,4 +1,6 @@
-bert-base-uncased
+albert-base-v2
 sst2
 4
-1
+2
+16
+16

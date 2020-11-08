@@ -1,10 +1,10 @@
-.PHONY: run test clean
+.PHONY: run test clean glue
 
 run:
 	./probe.sh < params
 
 glue:
-	./GLUE/glue.sh < params
+	./GLUE/glue.sh < ./GLUE/params
 
 test:
 	echo "Testing unpruned pretrained LMs"

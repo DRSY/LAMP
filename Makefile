@@ -1,4 +1,4 @@
-.PHONY: run test clean glue
+.PHONY: probe test clean glue
 
 probe:
 	./probe.sh < params

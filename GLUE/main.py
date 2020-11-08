@@ -1,23 +1,53 @@
 '''
 Author: roy
 Date: 2020-11-07 15:49:03
-LastEditTime: 2020-11-08 19:33:50
+LastEditTime: 2020-11-08 21:07:15
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/GLUE/main.py
 '''
-import sys
 import os
+import sys
 sys.path.append(os.getcwd())
 
+from torch.nn.utils import prune
+from GLUE.glue_datamodule import *
+from GLUE.glue_model import *
 import logging
+from typing import *
+
+from pprint import pprint
+
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(filename)s [line:%(lineno)d] %(levelname)s:  %(message)s', datefmt='%a, %d %b %Y %H:%M:%S')
 logger = logging.getLogger(__name__)
 
-from GLUE.glue_model import *
-from GLUE.glue_datamodule import *
-from torch.nn.utils import prune
+
+def load_masks(model_name: str, bli: int, tli: int, relations: List, init_method: str):
+    masks = []
+    for relation in relations:
+        mask_pth = "/home/roy/commonsense/LAMA/masks/{}_{}_{}_{}_{}_init>{}.pickle".format(model_name, relation, (tli-bli+1)*6, bli, tli, init_method)
+        with open(mask_pth, mode='rb') as f:
+            mask = torch.load(f)
+            masks.append(mask)
+    return masks
+
+
+def union_masks(*masks):
+    final_mask = []
+    thresholded_masks = []
+    for mask in masks:
+        tmp = []
+        assert isinstance(mask[0], torch.nn.Parameter)
+        for matrix in mask:
+            prob = torch.sigmoid(matrix.data)
+            prob[prob > 0.5] = 1
+            prob[prob <= 0.5] = 0
+            prob = prob.bool()
+            tmp.append(prob)
+        thresholded_masks.append(tmp)
+    final_mask = torch.logical_or(*thresholded_masks).float()
+    return final_mask
 
 
 def apply_masks(pl_model: GLUETransformer, model_name, bli, tli, masks):
@@ -66,12 +96,11 @@ def apply_masks(pl_model: GLUETransformer, model_name, bli, tli, masks):
             parameters_tobe_pruned.append(
                 (layers[i].ffn.lin2, 'weight')
             )
-    assert len(masks) == len(parameters_tobe_pruned), f"{parameters_tobe_pruned} != {len(masks)}"
+    assert len(masks) == len(
+        parameters_tobe_pruned), f"{parameters_tobe_pruned} != {len(masks)}"
     for mask, (module, name) in zip(masks, parameters_tobe_pruned):
         prune.custom_from_mask(module, name, mask)
     logger.info("Pre-computed mask applied to {}".format(model_name))
-    
-    
 
 
 def parse_args():
@@ -80,6 +109,11 @@ def parse_args():
     parser = GLUEDataModule.add_argparse_args(parser)
     parser = GLUETransformer.add_model_specific_args(parser)
     parser.add_argument('--seed', type=int, default=42)
+    parser.add_argument('--apply_mask', default=False, action='store_true', help="whether to apply pre-computed mask")
+    parser.add_argument('--bli', type=int, default=None)
+    parser.add_argument('--tli', type=int, default=None)
+    parser.add_argument('--relations', nargs='+', type=str)
+    parser.add_argument('--init_method', type=str)
     return parser.parse_args()
 
 
@@ -98,4 +132,6 @@ if __name__ == "__main__":
     args = parse_args()
     print(vars(args))
     data_module, pl_model, trainer = main(args)
+    if args.apply_mask and args.bli is not None and args.tli is not None and args.init_method is not None:
+        apply_masks(pl_model, args.model_name, args.bli, args. tli, [])
     trainer.fit(pl_model, data_module)

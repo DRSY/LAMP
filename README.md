@@ -1,12 +1,12 @@
 <!--
  * @Author: your name
  * @Date: 2020-10-31 00:05:34
- * @LastEditTime: 2020-11-08 15:24:15
+ * @LastEditTime: 2020-11-08 16:59:21
  * @LastEditors: Please set LastEditors
  * @Description: In User Settings EditUse 
  * @FilePath: /LAMA/README.md
 -->
-# On Initialization for Fine-Tuning Pre-trained Language Model via Explicit Knowledge-Aware Stocastic Pruning
+# On Initialization for Fine-Tuning Pre-trained Language Models via Explicit Knowledge-Aware Stocastic Pruning
 
 ## Test unpruned models(default set ot bert-base-uncased)
 ```bash

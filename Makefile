@@ -8,7 +8,7 @@ glue:
 
 test:
 	echo "Testing unpruned pretrained LMs"
-	python -W ignore -u utils.py
+	python -W ignore -u utils.py albert-xxlarge-v2 3
 
 clean:
-	rm -f *.log
+	rm -rf *.log

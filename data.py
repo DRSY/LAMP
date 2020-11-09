@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-11-01 11:08:20
-LastEditTime: 2020-11-04 19:42:08
+LastEditTime: 2020-11-09 16:07:55
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/data.py
@@ -29,6 +29,32 @@ class LAMADataset(Dataset):
         self.datas = []
         self.relation_to_id = OrderedDict()
         self.read_data(self.path)
+    
+    def parse_instance(self, instance):
+        """
+        use this function to parse instance from different dataset and append it to self.datas
+        """
+        if 'ConceptNet' in self.path:
+            masked_sentences = instance['masked_sentences']
+            relation = instance['pred']
+            if not relation in self.relation_to_id:
+                self.relation_to_id[relation] = len(self.relation_to_id)
+            obj_label = instance['obj_label']
+            if '[MASK]' not in masked_sentences[0]:
+                pass
+            else:
+                self.datas.append([masked_sentences[0], obj_label, relation])
+        elif 'TREx' in self.path:
+            evidences = instance['evidences']
+            obj_label = instance['obj_label']
+            predicate_id = instance['predicate_id']
+            if predicate_id not in self.relation_to_id:
+                self.relation_to_id[predicate_id] = len(self.relation_to_id)
+            masked_sentence = evidences[0]['masked_sentence']
+            if '[MASK]' not in masked_sentence:
+                pass
+            else:
+                self.datas.append([masked_sentence, obj_label, predicate_id])
 
     def read_data(self, path: str):
         assert path.endswith('jsonl'), "not a jsonline file"
@@ -42,7 +68,7 @@ class LAMADataset(Dataset):
                 obj_label = instance['obj_label']
                 if '[MASK]' not in masked_sentences[0]:
                     continue
-                self.datas.append((masked_sentences[0], obj_label, relation))
+                self.datas.append([masked_sentences[0], obj_label, relation])
         logger.info("finish reading file {}, get {} instances".format(
             path, len(self.datas)))
 

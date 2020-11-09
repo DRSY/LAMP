@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-11-01 14:14:11
-LastEditTime: 2020-11-08 23:23:31
+LastEditTime: 2020-11-09 09:24:37
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/model.py
@@ -209,7 +209,7 @@ class SelfMaskingModel(pl.LightningModule):
     def feed_batch_straight_through(self, input_dict, labels, relation_id: int, device):
         """
         feed a batch of input with the same relation
-        use hard straight through gradient estimator
+        use hard straight-through gradient estimator
         """
         pruning_masks_logits = self.pruning_mask_generators[relation_id]
         pruning_masks_soft_samples = []
@@ -218,7 +218,7 @@ class SelfMaskingModel(pl.LightningModule):
             _probs = torch.sigmoid(cuda_mask)
             _probs[_probs>0.5] = 1
             _probs[_probs<=0.5] = 0
-            straight_through_sample = (_probs + cuda_mask).detach() - cuda_mask
+            straight_through_sample = (_probs - cuda_mask).detach() + cuda_mask
             pruning_masks_soft_samples.append(straight_through_sample)
         self.prune(pruning_masks=pruning_masks_soft_samples)
 

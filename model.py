@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-11-01 14:14:11
-LastEditTime: 2020-11-09 09:24:37
+LastEditTime: 2020-11-09 15:15:39
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/model.py
@@ -88,45 +88,55 @@ class SelfMaskingModel(pl.LightningModule):
         if len(self.parameters_tobe_pruned) > 0:
             return
         parameters_tobe_pruned = []
-        if 'roberta' in self.model_name:
+        if 'albert' in self.model_name:
+            layers = self.pretrained_language_model.albert.encoder.albert_layer_groups[0].albert_layers[0]
+        elif 'roberta' in self.model_name:
             layers = self.pretrained_language_model.roberta.encoder.layer
         elif 'distil' in self.model_name:
             layers = self.pretrained_language_model.distilbert.transformer.layer
         else:
             layers = self.pretrained_language_model.bert.encoder.layer
-        for i in range(bli, tli+1):
-            try:
-                parameters_tobe_pruned.append(
-                    (layers[i].attention.self.query, 'weight'))
-                parameters_tobe_pruned.append(
-                    (layers[i].attention.self.key, 'weight'))
-                parameters_tobe_pruned.append(
-                    (layers[i].attention.self.value, 'weight'))
-                parameters_tobe_pruned.append(
-                    (layers[i].attention.output.dense, 'weight'))
-                parameters_tobe_pruned.append(
-                    (layers[i].intermediate.dense, 'weight'))
-                parameters_tobe_pruned.append(
-                    (layers[i].output.dense, 'weight'))
-            except Exception:
-                parameters_tobe_pruned.append(
-                    (layers[i].attention.q_lin, 'weight')
-                )
-                parameters_tobe_pruned.append(
-                    (layers[i].attention.k_lin, 'weight')
-                )
-                parameters_tobe_pruned.append(
-                    (layers[i].attention.v_lin, 'weight')
-                )
-                parameters_tobe_pruned.append(
-                    (layers[i].attention.out_lin, 'weight')
-                )
-                parameters_tobe_pruned.append(
-                    (layers[i].ffn.lin1, 'weight')
-                )
-                parameters_tobe_pruned.append(
-                    (layers[i].ffn.lin2, 'weight')
-                )
+        if 'albert' in self.model_name:
+            parameters_tobe_pruned.append((layers.attention.query, 'weight'))
+            parameters_tobe_pruned.append((layers.attention.key, 'weight'))
+            parameters_tobe_pruned.append((layers.attention.value, 'weight'))
+            parameters_tobe_pruned.append((layers.attention.dense, 'weight'))
+            parameters_tobe_pruned.append((layers.ffn, 'weight'))
+            parameters_tobe_pruned.append((layers.ffn_output, 'weight'))
+        else:
+            for i in range(bli, tli+1):
+                try:
+                    parameters_tobe_pruned.append(
+                        (layers[i].attention.self.query, 'weight'))
+                    parameters_tobe_pruned.append(
+                        (layers[i].attention.self.key, 'weight'))
+                    parameters_tobe_pruned.append(
+                        (layers[i].attention.self.value, 'weight'))
+                    parameters_tobe_pruned.append(
+                        (layers[i].attention.output.dense, 'weight'))
+                    parameters_tobe_pruned.append(
+                        (layers[i].intermediate.dense, 'weight'))
+                    parameters_tobe_pruned.append(
+                        (layers[i].output.dense, 'weight'))
+                except Exception:
+                    parameters_tobe_pruned.append(
+                        (layers[i].attention.q_lin, 'weight')
+                    )
+                    parameters_tobe_pruned.append(
+                        (layers[i].attention.k_lin, 'weight')
+                    )
+                    parameters_tobe_pruned.append(
+                        (layers[i].attention.v_lin, 'weight')
+                    )
+                    parameters_tobe_pruned.append(
+                        (layers[i].attention.out_lin, 'weight')
+                    )
+                    parameters_tobe_pruned.append(
+                        (layers[i].ffn.lin1, 'weight')
+                    )
+                    parameters_tobe_pruned.append(
+                        (layers[i].ffn.lin2, 'weight')
+                    )
         self.parameters_tobe_pruned = tuple(parameters_tobe_pruned)
 
     def create_pruning_mask_matrices(self):

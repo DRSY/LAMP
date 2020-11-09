@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-11-07 15:49:03
-LastEditTime: 2020-11-08 21:07:15
+LastEditTime: 2020-11-09 16:41:39
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/GLUE/main.py
@@ -133,5 +133,14 @@ if __name__ == "__main__":
     print(vars(args))
     data_module, pl_model, trainer = main(args)
     if args.apply_mask and args.bli is not None and args.tli is not None and args.init_method is not None:
-        apply_masks(pl_model, args.model_name, args.bli, args. tli, [])
+        # load masks
+        logger.info("Loading pre-computed masks")
+        masks = load_masks(args.model_name, args.bli, args.tli, args.relations, args.init_method)
+        # union masks
+        logger.info("Unifying masks")
+        final_mask = union_masks(*masks)
+        # apply masks
+        logger.info("Applying final unioned mask")
+        apply_masks(pl_model, args.model_name, args.bli, args. tli, final_mask)
+    logger.info("Start training on GLUE")
     trainer.fit(pl_model, data_module)

@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-11-01 11:08:20
-LastEditTime: 2020-11-09 16:07:55
+LastEditTime: 2020-11-09 16:19:43
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/data.py
@@ -61,6 +61,8 @@ class LAMADataset(Dataset):
         logger.info("start reading file {}".format(path))
         with open(path, mode='r', encoding='utf-8') as f:
             for instance in jsonlines.Reader(f):
+                # try this out!
+                # self.parse_instance(instance)
                 masked_sentences = instance['masked_sentences']
                 relation = instance['pred']
                 if not relation in self.relation_to_id:

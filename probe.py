@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-10-31 11:03:02
-LastEditTime: 2020-11-08 23:26:50
+LastEditTime: 2020-11-09 22:11:21
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/probe.py
@@ -95,8 +95,9 @@ def validate(model: SelfMaskingModel, tokenizer, device, corpus_file_path: str, 
                     hard_sample = torch.sigmoid(pruning_mask).to(
                         device)  # use the expectation values
                 else:
-                    hard_sample = utils.bernoulli_hard_sampler(
-                        torch.sigmoid(pruning_mask), require_logprob=False).to(device)  # use discrete Bernoulli variables
+                    hard_sample = torch.sigmoid(pruning_mask).to(device)
+                    hard_sample[hard_sample>0.5] = 1
+                    hard_sample[hard_sample<=0.5] = 0
                 hard_samples.append(hard_sample)
             model.prune(pruning_masks=hard_samples)
             pruned_predictions = utils.LAMA(
@@ -215,7 +216,7 @@ def validate(model: SelfMaskingModel, tokenizer, device, corpus_file_path: str, 
     return ret_dict
 
 
-def probing(epoch, max_epochs, dataloader, optimizers, lr_schedulers, model, device):
+def probing(epoch, max_epochs, dataloader, optimizers, lr_schedulers, model: SelfMaskingModel, device):
     total = len(dataloader)
     pbar = tqdm(enumerate(dataloader), total=total)
     avg_loss = .0
@@ -230,7 +231,10 @@ def probing(epoch, max_epochs, dataloader, optimizers, lr_schedulers, model, dev
             input_dict = batch[0][i].to(device)
             labels = batch[1][i].to(device)
             cnt += batch[0][i]['input_ids'].size(0)
-            loss = model.feed_batch(input_dict, labels, relation_id, device)
+            if args.soft_train:
+                loss = model.feed_batch(input_dict, labels, relation_id, device)
+            else:
+                loss = model.feed_batch_straight_through(input_dict, labels, relation_id, device)
             optimizer.step()
             scheduler.step()
             total_loss += loss * batch[0][i]['input_ids'].size(0)
@@ -296,8 +300,12 @@ def main(args):
     best_micro_pruned_p1 = 0
     logger.info(
         "Start to train pruning mask generators using soft approximation")
+    logger.info("hard binary mask in training" if not args.soft_train else "soft mask in training")
     logger.info(
         "hard binary mask in inference" if not args.soft_infer else "soft mask in inference")
+    best_p1 = 0
+    best_p2 = 0
+    best_p3 = 0
     for e in range(args.max_epochs):
         loss = probing(e+1, args.max_epochs, dataloader, optimizers,
                        schedulers, pl_model, device)
@@ -320,10 +328,16 @@ def main(args):
                 best_macro_pruned_p1 = ret_dict['macro_pruned_p1']
             if ret_dict['micro_pruned_p1'] > best_micro_pruned_p1:
                 best_micro_pruned_p1 = ret_dict['micro_pruned_p1']
+            best_p1 = ret_dict['micro_pruned_p1']
+            best_p2 = ret_dict['micro_pruned_p2']
+            best_p3 = ret_dict['micro_pruned_p3']
             utils.save_pruning_masks_generators(args,
                                                 args.model_name, pl_model.pruning_mask_generators, pl_model.id_to_relation, args.save_dir)
             logger.info(
                 "New best pruned P@1 observed, pruning mask generators saved!")
+    print("Best pruned P@1: {}".format(best_p1))
+    print("Best pruned P@2: {}".format(best_p2))
+    print("Best pruned P@3: {}".format(best_p3))
 
 
 if __name__ == "__main__":
@@ -337,14 +351,18 @@ if __name__ == "__main__":
 # results for unpruned models on ConceptNet subset of LAMA
 
 # roberta-large: 18.56 , loss: 43.65
+# albert-xxlarge-v2: 16.44, loss: 16.65
 # roberta-base: 15.51, loss: 18.45
 # bert-large-uncased: 15.13, loss: 6.59
 # bert-large-cased: 15.06, loss: 6.65
+# albert-xlarge-v2: 13.97, loss: 15.52
 # bert-base-uncased: 12.84, loss: 6.80
 # distilroberta-base: 12.49, loss: 18.47
 # bert-base-cased: 12.04, loss: 6.97
+# albert-large-v2: 11.66, loss: 14.56
 # distilbert-base-uncased: 11.37, loss: 6.77
 # distilbert-base-cased: 9.82, loss: 7.02
+# albert-base-v2: 7.66,loss: 14.78
 
 
 # results for pruned models

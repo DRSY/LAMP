@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-10-30 22:18:56
-LastEditTime: 2020-11-08 11:40:19
+LastEditTime: 2020-11-10 09:22:35
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/utils.py
@@ -14,6 +14,7 @@ import torch.nn.utils.prune as prune
 from torch.distributions import Bernoulli
 import jsonlines
 import prettytable as pt
+import sys
 
 from typing import List, Dict
 from tqdm import tqdm
@@ -101,6 +102,8 @@ def bernoulli_soft_sampler(logits, temperature: float = 0.1):
 
 def LAMA(model, tokenizer, device, input_w_mask, topk=5):
     # model.eval()
+    if '[MASK]' != tokenizer.mask_token:
+        input_w_mask = input_w_mask.replace('[MASK]', tokenizer.mask_token)
     inputs = tokenizer(input_w_mask, return_tensors='pt')
     mask_id = inputs['input_ids'][0].tolist().index(tokenizer.mask_token_id)
     inputs.to(device)
@@ -130,8 +133,14 @@ def save_pruning_masks_generators(args, model_name: str, pruning_masks_generator
 
 def sparsity(model, init_method: str):
     # sparsity
-    v = float(init_method)
-    threshold = torch.sigmoid(v).item()
+    try:
+        if init_method == 'ones':
+            v = 1.0
+        else:
+            v = float(init_method)
+    except Exception:
+        return dict()
+    threshold = torch.sigmoid(torch.tensor(v)).item()
     sparsities = dict()
     id_to_relation = model.id_to_relation
     for i in range(len(model.pruning_mask_generators)):
@@ -147,9 +156,9 @@ def sparsity(model, init_method: str):
     return sparsities
 
 
-def test():
-    bert_name = 'bert-base-uncased'
-    device = torch.device('cuda:0')
+def test(argv):
+    bert_name = argv[1]
+    device = torch.device('cuda:{}'.format(argv[2]))
     # masks = torch.nn.Parameter(torch.empty(768, 768))
     # opt = torch.optim.Adam(masks, lr=3e-4)
     # opt.zero_grad()
@@ -163,33 +172,36 @@ def test():
     bert.eval()
     freeze_parameters(bert)
     # init_state = copy.deepcopy(bert.state_dict())
-    tokenizer = AutoTokenizer.from_pretrained(bert_name)
+    tokenizer = AutoTokenizer.from_pretrained(bert_name, use_fast=True)
     print(tokenizer.mask_token_id)
     parameters_tobe_pruned = []
-    for i in range(8, 12):
-        parameters_tobe_pruned.append(
-            (bert.bert.encoder.layer[i].attention.self.query, 'weight'))
-        parameters_tobe_pruned.append(
-            (bert.bert.encoder.layer[i].attention.self.key, 'weight'))
-        parameters_tobe_pruned.append(
-            (bert.bert.encoder.layer[i].attention.self.value, 'weight'))
-        parameters_tobe_pruned.append(
-            (bert.bert.encoder.layer[i].attention.output.dense, 'weight'))
-        parameters_tobe_pruned.append(
-            (bert.bert.encoder.layer[i].intermediate.dense, 'weight'))
-        parameters_tobe_pruned.append(
-            (bert.bert.encoder.layer[i].output.dense, 'weight'))
-    parameters_tobe_pruned = tuple(parameters_tobe_pruned)
+    # for i in range(8, 12):
+    #     parameters_tobe_pruned.append(
+    #         (bert.bert.encoder.layer[i].attention.self.query, 'weight'))
+    #     parameters_tobe_pruned.append(
+    #         (bert.bert.encoder.layer[i].attention.self.key, 'weight'))
+    #     parameters_tobe_pruned.append(
+    #         (bert.bert.encoder.layer[i].attention.self.value, 'weight'))
+    #     parameters_tobe_pruned.append(
+    #         (bert.bert.encoder.layer[i].attention.output.dense, 'weight'))
+    #     parameters_tobe_pruned.append(
+    #         (bert.bert.encoder.layer[i].intermediate.dense, 'weight'))
+    #     parameters_tobe_pruned.append(
+    #         (bert.bert.encoder.layer[i].output.dense, 'weight'))
+    # parameters_tobe_pruned = tuple(parameters_tobe_pruned)
     # # prune
-    for module, name in parameters_tobe_pruned:
-        prune.random_unstructured(module, name, amount=0.30)
+    # for module, name in parameters_tobe_pruned:
+    #     prune.random_unstructured(module, name, amount=0.30)
         # Foobar_pruning(module, name, soft_samples[0])
-    print(sparsity(bert))
+    # print(sparsity(bert))
 
     corpus_fileobj = open("./data/ConceptNet/test.jsonl",
                           mode='r', encoding='utf-8')
     total_loss = .0
     cnt = 0
+    top1 = 0
+    top2 = 0
+    top3 = 0
     for instance in jsonlines.Reader(corpus_fileobj):
         cnt += 1
         text = instance['masked_sentences'][0].replace(
@@ -204,19 +216,39 @@ def test():
         outputs = bert(**input_dict, labels=labels)
         logits = outputs.logits
         loss = outputs.loss
+        probs = torch.softmax(logits[0, mask_index], dim=-1)
+        _, indices = torch.topk(probs, k=5)
+        predictions = tokenizer.decode(indices).strip().split()
+        try:
+            if obj_label == predictions[0].lower():
+                top1 += 1
+            if obj_label in [predictions[0].lower(), predictions[1].lower()]:
+                top2 += 1
+            if obj_label in [predictions[0].lower(), predictions[1].lower(), predictions[2].lower()]:
+                top3 += 1
+        except Exception:
+            pass
         # if loss.item() <= 2.2:
         #     print(text)
         #     print(obj_label)
         #     print(LAMA(bert, tokenizer, device, text))
         #     exit()
         # print(loss)
-        print(cnt)
         total_loss += loss.detach().item()
+        print(cnt)
         # print(LAMA(bert, tokenizer, torch.device('cpu'), text))
+    p1 = top1 / cnt
+    p2 = top2 / cnt
+    p3 = top3 / cnt
+    print(argv[1])
     print(total_loss / cnt)
+    print('P@1:', p1)
+    print('P@2:', p2)
+    print('P@3:', p3)
 
 
 if __name__ == "__main__":
-    test()
+    argv = sys.argv
+    test(argv)
     # for module, name in parameters_tobe_pruned:
     #     remove_prune_reparametrization(module, name)

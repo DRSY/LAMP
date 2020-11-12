@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-11-07 15:49:03
-LastEditTime: 2020-11-09 16:41:39
+LastEditTime: 2020-11-12 11:58:07
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/GLUE/main.py
@@ -34,7 +34,6 @@ def load_masks(model_name: str, bli: int, tli: int, relations: List, init_method
 
 
 def union_masks(*masks):
-    final_mask = []
     thresholded_masks = []
     for mask in masks:
         tmp = []
@@ -46,8 +45,11 @@ def union_masks(*masks):
             prob = prob.bool()
             tmp.append(prob)
         thresholded_masks.append(tmp)
-    final_mask = torch.logical_or(*thresholded_masks).float()
-    return final_mask
+    final_masks = []
+    for mask_for_all_relations in zip(thresholded_masks):
+        tmp_mask = torch.logical_or(*mask_for_all_relations)
+        final_masks.append(tmp_mask)
+    return final_masks
 
 
 def apply_masks(pl_model: GLUETransformer, model_name, bli, tli, masks):

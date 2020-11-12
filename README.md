@@ -1,14 +1,12 @@
 <!--
  * @Author: your name
  * @Date: 2020-10-31 00:05:34
- * @LastEditTime: 2020-11-09 19:04:30
+ * @LastEditTime: 2020-11-12 10:50:27
  * @LastEditors: Please set LastEditors
  * @Description: In User Settings EditUse 
  * @FilePath: /LAMA/README.md
 -->
-# On Initialization for Fine-Tuning Pre-trained Language Models via Explicit Knowledge-Aware Weights Pruning and Rescaling
-or
-# Adapting Weights of Pre-trained Language Models for Better Fine-Tuning via Explicit Knowledge-Aware Pruning and Rescaling
+# Weakly Supervised Weights Rescaling and Pruning for Knowledge Mining from Pretrained Language Models
 
 ## Test unpruned models(default set ot bert-base-uncased)
 ```bash

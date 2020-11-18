@@ -43,7 +43,7 @@ class SelfMaskingModel(pl.LightningModule):
     """
     init_methods = {
         'uniform': torch.nn.init.uniform_,
-        'normal': torch.nn.init.normal_,
+        'normal': partial(torch.nn.init.normal_, mean=0, std=1),
         'zeros': torch.nn.init.zeros_, # 50 % initial sparsity
         '0.41': partial(torch.nn.init.constant_, val=0.41), # 40% initial sparsity
         '0.62': partial(torch.nn.init.constant_, val=0.62), # 35% initial sparsity

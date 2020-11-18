@@ -20,8 +20,24 @@ place_of_birth_path = "./data/Google_RE/place_of_birth_test.jsonl"
 place_of_death_path = "./data/Google_RE/place_of_death_test.jsonl"
 
 # allowed models
-MODEL_NAMES = ['bert-base-cased', 'bert-base-uncased', 'distilbert-base-cased', 'distilbert-base-uncased', 'distilroberta-base',
-               'bert-large-uncased', 'bert-large-cased', 'roberta-base', 'roberta-large', 'albert-base-v2', 'albert-large-v2']
+MODEL_NAMES = ['bert-base-cased', 'bert-base-uncased', 'distilbert-base-cased', 'distilbert-base-uncased', 'distilroberta-base', 'funnel-transformer/large-base', 'funnel-transformer/medium-base', 'bert-base-cased-finetuned-mrpc', 'SpanBERT/spanbert-base-cased', 'SpanBERT/spanbert-large-cased',
+               'bert-large-uncased', 'bert-large-cased', 'roberta-base', 'roberta-large', 'albert-base-v2', 'albert-large-v2', 'albert-xlarge-v2', 'albert-xxlarge-v2', 'dbmdz/bert-base-cased-finetuned-conll03-english']
+
+# layers
+TRANSFORMER_LAYERS = {
+    'funnel-transformer/medium-base': 12,
+    'funnel-transformer/large-base': 24,
+    'bert-base-uncased': 12,
+    'bert-base-cased': 12,
+    'SpanBERT/spanbert-base-cased': 12,
+    'SpanBERT/spanbert-large-cased': 24,
+    'bert-large-uncased': 24,
+    'bert-large-cased': 24,
+    'distilbert-base-uncased': 6,
+    'distilbert-base-cased': 6,
+    'roberta-base': 12,
+    'roberta-large': 24,
+}
 
 
 def get_args():
@@ -49,7 +65,8 @@ def get_args():
                         help="whether trigger test utility rather than official training")
     parser.add_argument('--soft_infer', action='store_true',
                         default=False, help="whether use soft mask or hard binary mask during inference")
-    parser.add_argument('--soft_train', action='store_true', default=False, help="whether to use re-parametrization during training")
+    parser.add_argument('--soft_train', action='store_true', default=False,
+                        help="whether to use re-parametrization during training")
     parser.add_argument('--bottom_layer_index', type=int, default=0)
     parser.add_argument('--top_layer_index', type=int, default=11)
     parser.add_argument('--init_method', type=str, default='uniform', choices=[

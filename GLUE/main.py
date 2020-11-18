@@ -1,11 +1,12 @@
 '''
 Author: roy
 Date: 2020-11-07 15:49:03
-LastEditTime: 2020-11-12 11:58:07
+LastEditTime: 2020-11-16 20:04:58
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/GLUE/main.py
 '''
+from functools import reduce
 import os
 import sys
 sys.path.append(os.getcwd())
@@ -13,24 +14,50 @@ sys.path.append(os.getcwd())
 from torch.nn.utils import prune
 from GLUE.glue_datamodule import *
 from GLUE.glue_model import *
-import logging
+# import logging
 from typing import *
 
-from pprint import pprint
 
-logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s %(filename)s [line:%(lineno)d] %(levelname)s:  %(message)s', datefmt='%a, %d %b %Y %H:%M:%S')
-logger = logging.getLogger(__name__)
+# logging.basicConfig(level=logging.INFO,
+#                     format='%(asctime)s %(filename)s [line:%(lineno)d] %(levelname)s:  %(message)s', datefmt='%a, %d %b %Y %H:%M:%S')
+# logger = logging.getLogger(__name__)
+
+
+ConceptNetRelations = ['AtLocation', 'CapableOf', 'Causes', 'CausesDesire', 'Desires', 'HasA', 'HasPrerequisite', 'HasProperty', 'HasSubevent', 'IsA', 'MadeOf', 'MotivatedByGoal', 'NotDesires', 'PartOf', 'ReceivesAction', 'UsedFor']
 
 
 def load_masks(model_name: str, bli: int, tli: int, relations: List, init_method: str):
     masks = []
     for relation in relations:
-        mask_pth = "/home/roy/commonsense/LAMA/masks/{}_{}_{}_{}_{}_init>{}.pickle".format(model_name, relation, (tli-bli+1)*6, bli, tli, init_method)
+        mask_pth = "/home1/roy/commonsense/LAMA/masks/{}_{}_{}_{}_{}_init>{}.pickle".format(model_name, relation, (tli-bli+1)*6, bli, tli, init_method)
         with open(mask_pth, mode='rb') as f:
             mask = torch.load(f)
             masks.append(mask)
     return masks
+
+def dissimilarity(mask1, mask2):
+    assert len(mask1) == len(mask2)
+    _mask1 = []
+    _mask2 = []
+    for mask in mask1:
+        mask = torch.sigmoid(mask)
+        mask[mask>0.5] = 1
+        mask[mask<=0.5] = 0
+        _mask1.append(mask)
+    for mask in mask2:
+        mask = torch.sigmoid(mask)
+        mask[mask>0.5] = 1
+        mask[mask<=0.5] = 0
+        _mask2.append(mask)
+    cnt = 0
+    c = 0
+    for i in range(len(_mask1)):
+        fro_norm = torch.norm(_mask1[i]-_mask2[i])**2
+        c += fro_norm.item()
+        cnt += _mask1[i].nelement()
+        if i % 5 == 0:
+            print(c / cnt)
+    print(c / cnt)
 
 
 def union_masks(*masks):
@@ -46,9 +73,18 @@ def union_masks(*masks):
             tmp.append(prob)
         thresholded_masks.append(tmp)
     final_masks = []
-    for mask_for_all_relations in zip(thresholded_masks):
-        tmp_mask = torch.logical_or(*mask_for_all_relations)
+    for mask_for_all_relations in zip(*thresholded_masks):
+        tmp_mask = reduce(lambda x, y: torch.logical_or(x, y), mask_for_all_relations)
         final_masks.append(tmp_mask)
+    cnt = 0
+    num_0_all = 0
+    for mask in final_masks:
+        num_0 = (mask.int()==0).sum().item()
+        cnt += mask.nelement()
+        num_0_all += num_0
+    print(num_0_all)
+    print(cnt)
+    print(num_0_all / cnt)
     return final_masks
 
 
@@ -102,7 +138,8 @@ def apply_masks(pl_model: GLUETransformer, model_name, bli, tli, masks):
         parameters_tobe_pruned), f"{parameters_tobe_pruned} != {len(masks)}"
     for mask, (module, name) in zip(masks, parameters_tobe_pruned):
         prune.custom_from_mask(module, name, mask)
-    logger.info("Pre-computed mask applied to {}".format(model_name))
+        prune.remove(module, name)
+    print("Pre-computed mask applied to {}".format(model_name))
 
 
 def parse_args():
@@ -134,15 +171,16 @@ if __name__ == "__main__":
     args = parse_args()
     print(vars(args))
     data_module, pl_model, trainer = main(args)
-    if args.apply_mask and args.bli is not None and args.tli is not None and args.init_method is not None:
-        # load masks
-        logger.info("Loading pre-computed masks")
-        masks = load_masks(args.model_name, args.bli, args.tli, args.relations, args.init_method)
-        # union masks
-        logger.info("Unifying masks")
-        final_mask = union_masks(*masks)
-        # apply masks
-        logger.info("Applying final unioned mask")
-        apply_masks(pl_model, args.model_name, args.bli, args. tli, final_mask)
-    logger.info("Start training on GLUE")
+    # if args.apply_mask and args.bli is not None and args.tli is not None and args.init_method is not None:
+    #     # load masks
+    #     print("Loading pre-computed masks")
+    #     rels = ['IsA', 'Causes']
+    #     masks = load_masks(args.model_name_or_path, args.bli, args.tli, rels, args.init_method)
+    #     # union masks
+    #     print("Unifying masks")
+    #     final_mask = union_masks(*masks)
+    #     # apply 
+    #     print("Applying final unioned mask")
+    #     apply_masks(pl_model, args.model_name_or_path, args.bli, args. tli, final_mask)
+    # print("Start training on GLUE")
     trainer.fit(pl_model, data_module)

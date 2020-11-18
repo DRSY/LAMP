@@ -12,4 +12,7 @@ read -p "max epochs:> " max_epochs
 read -p "gpus:> " gpus
 read -p "train_batch_size:> " train_bs
 read -p "eval_batch_size:> " eval_bs
-CUDA_VISIBLE_DEVICES=3 python -W ignore -u ./GLUE/main.py --model_name_or_path $model_name --task_name $task_name --max_epochs $max_epochs --gpus $gpus --train_batch_size $train_bs --eval_batch_size $eval_bs | tee "`date`_glue".log
+read -p "bli:> " bli
+read -p "tli:> " tli
+read -p "init_method:> " init_method
+CUDA_VISIBLE_DEVICES=0 python -W ignore -u ./GLUE/main.py --seed 12 --learning_rate 4e-5 --model_name_or_path $model_name --task_name $task_name --max_epochs $max_epochs --gpus $gpus --train_batch_size $train_bs --eval_batch_size $eval_bs --bli $bli --tli $tli --init_method $init_method --apply_mask | tee "`date`_glue".log

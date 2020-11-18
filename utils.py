@@ -121,10 +121,13 @@ def save_pruning_masks_generators(args, model_name: str, pruning_masks_generator
     """
     Save pruning mask generators specified with model name, relation type and number of transformer blocks of interest.
     """
+    if "/" in model_name:
+        model_name = model_name.split("/")[-1]
     for i in range(len(id_to_relation)):
         relation_str = id_to_relation[i]
-        file_prefix = "{}/{}_{}_{}_{}_{}_init>{}.pickle".format(save_dir,
-                                                                model_name, relation_str, len(pruning_masks_generators[i]), args.bottom_layer_index, args.top_layer_index, args.init_method)
+        type = "soft" if args.soft_infer and args.soft_train else "hard"
+        file_prefix = "{}/{}_{}_{}_{}_{}_init>{}_{}.pickle".format(save_dir,
+                                                                model_name, relation_str, len(pruning_masks_generators[i]), args.bottom_layer_index, args.top_layer_index, args.init_method, type)
         with open(file_prefix, mode='wb') as f:
             torch.save(pruning_masks_generators[i], f)
         print("Pruning mask generators for {} is saved at {}".format(

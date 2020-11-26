@@ -6,7 +6,8 @@
  * @Description: In User Settings EditUse 
  * @FilePath: /LAMA/README.md
 -->
-# Weakly Supervised Weights Pruning for Relational Knowledge Mining from Pretrained Language Models
+# On Relational Knowledge In Pretrained Language Model using Weakly Supervised
+Weights Pruning
 
 ## Test unpruned models(default set ot bert-base-uncased)
 ```bash

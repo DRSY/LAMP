@@ -6,7 +6,7 @@
  * @Description: In User Settings EditUse 
  * @FilePath: /LAMA/README.md
 -->
-# On Relational Knowledge In Pretrained Language Model using Weakly Supervised
+# Distillation of Commonsense Knowledge in Pretrained Language Models via Weakly Supervised Weights Pruning
 Weights Pruning
 
 ## Test unpruned models(default set ot bert-base-uncased)

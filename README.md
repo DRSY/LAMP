@@ -6,7 +6,7 @@
  * @Description: In User Settings EditUse 
  * @FilePath: /LAMA/README.md
 -->
-# Distillation of Commonsense Knowledge in Pretrained Language Models via Weakly Supervised Weights Pruning
+# Distillation of Commonsense Knowledge in Pretrained Language Models via Weakly Supervised Weights Pruning(LAMP)
 Weights Pruning
 
 ## Test unpruned models(default set ot bert-base-uncased)

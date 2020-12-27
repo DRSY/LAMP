@@ -7,7 +7,7 @@
  * @FilePath: /LAMA/README.md
 -->
 # Exploring Latent Relational Structure in Pretrained Masked Language Models: A Case Study of Commonsese Knowledge
-Weights Pruning
+Codebase for the paper "Exploring Latent Relational Structure in Pretrained Masked Language Models: A Case Study of Commonsese Knowledge".
 
 ## Test unpruned models(default set ot bert-base-uncased)
 ```bash

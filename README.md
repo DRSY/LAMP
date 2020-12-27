@@ -9,7 +9,7 @@
 # Exploring Latent Relational Structure in Pretrained Masked Language Models: A Case Study of Commonsese Knowledge
 Codebase for the paper "Exploring Latent Relational Structure in Pretrained Masked Language Models: A Case Study of Commonsese Knowledge".
 
-## Test unpruned models(default set ot bert-base-uncased)
+## Test unpruned models(default set to bert-base-uncased)
 ```bash
 make -f Makefile test
 ```

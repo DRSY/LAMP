@@ -6,7 +6,7 @@
  * @Description: In User Settings EditUse 
  * @FilePath: /LAMA/README.md
 -->
-# Exploring Latent Relational Structure in Pretrained Masked Language Models: A Case Study of Commonsese Knowledge
+# Exploring and Exploiting Latent Commonsense Knowledge in Pretrained Masked Language Models
 Codebase for the paper "Exploring Latent Relational Structure in Pretrained Masked Language Models: A Case Study of Commonsese Knowledge".
 
 ## Test unpruned models(default set to bert-base-uncased)

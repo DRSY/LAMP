@@ -14,7 +14,7 @@ Codebase for the paper "Exploring and Exploiting Latent Commonsense Knowledge in
 
 ## Install Required packages
 ```bash
-pip install -r requirements
+pip install -r requirements.txt
 ```
 
 

@@ -12,6 +12,12 @@
 
 Codebase for the paper "Exploring and Exploiting Latent Commonsense Knowledge in Pretrained Masked Language Models".
 
+## Install Required packages
+```bash
+pip install -r requirements
+```
+
+
 ## Test unpruned models(default set to bert-base-uncased)
 ```bash
 make -f Makefile test

@@ -8,6 +8,8 @@
 -->
 # Exploring and Exploiting Latent Commonsense Knowledge in Pretrained Masked Language Models
 ![](https://img.shields.io/badge/Language%20Model%20Pruning(LAMP)-DistilBERT%2FBERT%2FMPNet-blue.svg)
+
+
 Codebase for the paper "Exploring and Exploiting Latent Commonsense Knowledge in Pretrained Masked Language Models".
 
 ## Test unpruned models(default set to bert-base-uncased)

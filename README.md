@@ -7,7 +7,7 @@
  * @FilePath: /LAMA/README.md
 -->
 # Exploring and Exploiting Latent Commonsense Knowledge in Pretrained Masked Language Models
-![](https://img.shields.io/badge/Language%20Model%20Pruning(LAMP)-DistilBERT%2FBERT%2FMPNet-blue.svg)
+![](https://img.shields.io/badge/Language%20Model%20Pruning(LAMP)-DistilBERT%2FBERT%2FMPNet-blue.svg) ![](https://img.shields.io/badge/paper-pdf-red.svg)
 
 
 Codebase for the paper "Exploring and Exploiting Latent Commonsense Knowledge in Pretrained Masked Language Models".

@@ -6,10 +6,19 @@
  * @Description: In User Settings EditUse 
  * @FilePath: /LAMA/README.md
 -->
-# On Relational Knowledge In Pretrained Language Model using Weakly Supervised
-Weights Pruning
+# Exploring and Exploiting Latent Commonsense Knowledge in Pretrained Masked Language Models
+![](https://img.shields.io/badge/Language%20Model%20Pruning(LAMP)-DistilBERT%2FBERT%2FMPNet-blue.svg) ![](https://img.shields.io/badge/paper-pdf-red.svg)
 
-## Test unpruned models(default set ot bert-base-uncased)
+
+Codebase for the paper "Exploring and Exploiting Latent Commonsense Knowledge in Pretrained Masked Language Models".
+
+## Install required packages
+```bash
+pip install -r requirements.txt
+```
+
+
+## Test unpruned models(default set to bert-base-uncased)
 ```bash
 make -f Makefile test
 ```

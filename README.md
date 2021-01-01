@@ -1,7 +1,7 @@
 <!--
  * @Author: your name
  * @Date: 2020-10-31 00:05:34
- * @LastEditTime: 2020-11-18 20:33:40
+ * @LastEditTime: 2021-01-01 23:44:44
  * @LastEditors: Please set LastEditors
  * @Description: In User Settings EditUse 
  * @FilePath: /LAMA/README.md
@@ -13,6 +13,12 @@
 Codebase for the paper "Exploring and Exploiting Latent Commonsense Knowledge in Pretrained Masked Language Models".
 
 **Note**: under maintenance, will be complete soon.
+
+## Current supported models:
+- DistilBERT-base
+- BERT(base, large, etc.)
+- MPNet
+All above language models are based on WordPiece tokenization.
 
 ## Install required packages
 ```bash

@@ -158,6 +158,24 @@ def sparsity(model, init_method: str):
         sparsities[id_to_relation[i]] = cnt / total_cnt
     return sparsities
 
+def relation_miner(context: str):
+    """
+    Return a set of possible commonsense relations given the context
+    """
+    token2rels = {
+        'use': ['UsedFor'],
+        'used': ['UsedFor'],
+        'where': ['AtLocation'],
+        'Where': ['AtLocation'],
+        'cause': ['Causes'],
+        'cause': ['Causes'],
+        'desire': ['Desires'],
+        'desires': ['Desires'],
+        'in': ['AtLocation'],
+        'happen': ['HasSubevent']
+    }
+    raise NotImplementedError
+
 
 def test(argv):
     bert_name = argv[1]

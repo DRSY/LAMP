@@ -3,9 +3,11 @@
 all: probe
 
 probe:
+	echo "Probing"
 	./probe.sh < params
 
 glue:
+	echo "Fine tuning LM on GLUE benchmark"
 	./GLUE/glue.sh < ./GLUE/params
 
 test:

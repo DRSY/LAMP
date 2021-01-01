@@ -1,7 +1,7 @@
 '''
 Author: roy
 Date: 2020-11-01 11:08:20
-LastEditTime: 2020-11-10 20:43:01
+LastEditTime: 2020-11-09 16:19:43
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /LAMA/data.py
@@ -15,7 +15,7 @@ from transformers import AutoTokenizer
 
 from pprint import pprint
 from config import (conceptNet_path, place_of_birth_path,
-                    place_of_death_path, logger, get_args)
+        place_of_death_path, logger, get_args)
 
 
 class LAMADataset(Dataset):
@@ -29,7 +29,7 @@ class LAMADataset(Dataset):
         self.datas = []
         self.relation_to_id = OrderedDict()
         self.read_data(self.path)
-    
+
     def parse_instance(self, instance):
         """
         use this function to parse instance from different dataset and append it to self.datas

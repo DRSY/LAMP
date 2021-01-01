@@ -69,7 +69,7 @@ class SelfMaskingModel(pl.LightningModule):
         self.model_name = model_name
         # pretrained language model to be probed
         self.pretrained_language_model = AutoModelForMaskedLM.from_pretrained(
-            model_name, return_dict=True)
+            model_name, return_dict=True, output_hidden_states=True, output_attentions=True)
 
         # load parameters to be pruned
         self.parameters_tobe_pruned = tuple()
@@ -94,8 +94,12 @@ class SelfMaskingModel(pl.LightningModule):
             layers = self.pretrained_language_model.roberta.encoder.layer
         elif 'distil' in self.model_name:
             layers = self.pretrained_language_model.distilbert.transformer.layer
-        else:
+        elif 'bert' in self.model_name:
             layers = self.pretrained_language_model.bert.encoder.layer
+        elif 'mpnet' in self.model_name:
+            layers = self.pretrained_language_model.mpnet.encoder.layer
+        elif 'electra' in self.model_name:
+            layers = self.pretrained_language_model.electra.encoder.layer
         if 'albert' in self.model_name:
             parameters_tobe_pruned.append((layers.attention.query, 'weight'))
             parameters_tobe_pruned.append((layers.attention.key, 'weight'))
@@ -103,6 +107,20 @@ class SelfMaskingModel(pl.LightningModule):
             parameters_tobe_pruned.append((layers.attention.dense, 'weight'))
             parameters_tobe_pruned.append((layers.ffn, 'weight'))
             parameters_tobe_pruned.append((layers.ffn_output, 'weight'))
+        elif 'mpnet' in self.model_name:
+            for i in range(bli, tli+1):
+                parameters_tobe_pruned.append(
+                    (layers[i].attention.attn.q, 'weight'))
+                parameters_tobe_pruned.append(
+                    (layers[i].attention.attn.k, 'weight'))
+                parameters_tobe_pruned.append(
+                    (layers[i].attention.attn.v, 'weight'))
+                parameters_tobe_pruned.append(
+                    (layers[i].attention.attn.o, 'weight'))
+                parameters_tobe_pruned.append(
+                    (layers[i].intermediate.dense, 'weight'))
+                parameters_tobe_pruned.append(
+                    (layers[i].output.dense, 'weight'))
         else:
             for i in range(bli, tli+1):
                 try:
@@ -191,10 +209,46 @@ class SelfMaskingModel(pl.LightningModule):
             prune.remove(module, name)
         restore_init_state(self.pretrained_language_model,
                            self.orig_state_dict)
-    @staticmethod 
-    def L0_loss(pruning_masks: List):
-        
-        raise NotImplementedError
+
+    @torch.no_grad()
+    def get_cls_representation(self, input_dict, relation_id: int, device, use_fullscale=False):
+        if not use_fullscale:
+            pruning_masks_logits = self.pruning_mask_generators[relation_id]
+            pruning_masks_soft_samples = []
+            for pruning_mask_logits in pruning_masks_logits:
+                cuda_mask = pruning_mask_logits.to(device)
+                _probs = torch.sigmoid(cuda_mask)
+                _probs[_probs>0.5] = 1
+                _probs[_probs<=0.5] = 0
+                pruning_masks_soft_samples.append(_probs)
+            self.prune(pruning_masks=pruning_masks_soft_samples)
+
+        outputs = self.pretrained_language_model(**input_dict)
+        hidden_states = outputs.hidden_states
+        cls_representations = hidden_states[-1][:, 0, :] # (batch_size, hidden_dim)
+        if not use_fullscale:
+            self.restore()
+        return cls_representations
+
+    @torch.no_grad()
+    def get_mask_representation(self, input_dict, relation_id: int, mask_index, device, use_fullscale=False):
+        if not use_fullscale:
+            pruning_masks_logits = self.pruning_mask_generators[relation_id]
+            pruning_masks_soft_samples = []
+            for pruning_mask_logits in pruning_masks_logits:
+                cuda_mask = pruning_mask_logits.to(device)
+                _probs = torch.sigmoid(cuda_mask)
+                _probs[_probs>0.5] = 1
+                _probs[_probs<=0.5] = 0
+                pruning_masks_soft_samples.append(_probs)
+            self.prune(pruning_masks=pruning_masks_soft_samples)
+
+        outputs = self.pretrained_language_model(**input_dict)
+        hidden_states = outputs.hidden_states
+        cls_representations = hidden_states[-1][:, mask_index, :] # (batch_size, hidden_dim)
+        if not use_fullscale:
+            self.restore()
+        return cls_representations
 
     def feed_batch(self, input_dict, labels, relation_id: int, device):
         """

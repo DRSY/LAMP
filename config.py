@@ -19,8 +19,10 @@ conceptNet_path = "./data/ConceptNet/test.jsonl"
 place_of_birth_path = "./data/Google_RE/place_of_birth_test.jsonl"
 place_of_death_path = "./data/Google_RE/place_of_death_test.jsonl"
 
+conceptnet_ckbc_path = "./data/CKBC"
+
 # allowed models
-MODEL_NAMES = ['bert-base-cased', 'bert-base-uncased', 'distilbert-base-cased', 'distilbert-base-uncased', 'distilroberta-base', 'funnel-transformer/large-base', 'funnel-transformer/medium-base', 'bert-base-cased-finetuned-mrpc', 'SpanBERT/spanbert-base-cased', 'SpanBERT/spanbert-large-cased',
+MODEL_NAMES = ['microsoft/mpnet-base', 'bert-base-cased', 'bert-base-uncased', 'distilbert-base-cased', 'distilbert-base-uncased', 'distilroberta-base', 'funnel-transformer/large-base', 'funnel-transformer/medium-base', 'bert-base-cased-finetuned-mrpc', 'SpanBERT/spanbert-base-cased', 'SpanBERT/spanbert-large-cased', 'phiyodr/bert-base-finetuned-squad2', 'nreimers/TinyBERT_L-4_H-312_v2',
                'bert-large-uncased', 'bert-large-cased', 'roberta-base', 'roberta-large', 'albert-base-v2', 'albert-large-v2', 'albert-xlarge-v2', 'albert-xxlarge-v2', 'dbmdz/bert-base-cased-finetuned-conll03-english']
 
 # layers
@@ -37,6 +39,7 @@ TRANSFORMER_LAYERS = {
     'distilbert-base-cased': 6,
     'roberta-base': 12,
     'roberta-large': 24,
+    'microsoft/mpnet-base': 12
 }
 
 

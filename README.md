@@ -12,6 +12,8 @@
 
 Codebase for the paper "Exploring and Exploiting Latent Commonsense Knowledge in Pretrained Masked Language Models".
 
+**Note**: under maintainance, will be complete soon.
+
 ## Install required packages
 ```bash
 pip install -r requirements.txt

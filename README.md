@@ -18,7 +18,9 @@ Codebase for the paper "Exploring and Exploiting Latent Commonsense Knowledge in
 - DistilBERT-base
 - BERT(base, large, etc.)
 - MPNet
+
 All above language models are based on WordPiece tokenization.
+
 
 ## Install required packages
 ```bash

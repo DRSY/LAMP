@@ -25,13 +25,7 @@ All above language models are based on WordPiece tokenization.
 pip install -r requirements.txt
 ```
 
-
-## Test unpruned models(default set to bert-base-uncased)
-```bash
-make -f Makefile test
-```
-
-## Run probing
+## Run pruning and probing
 Specify parameters about probing experiments in a separate **params** file, then run:
 ```bash
 make -f Makefile probe

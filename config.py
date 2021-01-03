@@ -76,6 +76,9 @@ def get_args():
                         'uniform', 'normal', 'ones', 'zeros', '2.95', '2.75', '1.38', '0.85', '0.62', '0.41'], help="initialization method for pruning mask generators which determine the initial sparsity of pruning masks")
     parser.add_argument('--l0', default=False, action='store_true',
                         help="whether add l0 penalty to pruning masks")
+    parser.add_argument('--csqa', action='store_true', default=False)
+    parser.add_argument('--copa', action='store_true', default=False)
+    parser.add_argument('--eval', action='store_true', default=False)
     args = parser.parse_args()
     if args.model_name not in MODEL_NAMES:
         raise Exception("model name {} not in predefined list: {}".format_map(

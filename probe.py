@@ -304,26 +304,26 @@ def validate(model: SelfMaskingModel, tokenizer, device, corpus_file_path: str, 
             except ValueError:
                 pass
             model.restore()
-            unpruned_predictions = utils.LAMA(
-                model.pretrained_language_model, tokenizer, device, masked_sentences[0].replace('[MASK]', tokenizer.mask_token), topk=5)
+            # unpruned_predictions = utils.LAMA(
+            #     model.pretrained_language_model, tokenizer, device, masked_sentences[0].replace('[MASK]', tokenizer.mask_token), topk=5)
             # print(pruned_predictions)
             # print(unpruned_predictions)
-            try:
-                pos = unpruned_predictions.index(obj_label)
-                if pos == 0:
-                    flag = False
-                    unpruned_top1 += 1
-                    relation_specific_unpruned_p1[relation_id] += 1
-                if pos in [0, 1]:
-                    relation_specific_unpruned_p2[relation_id] += 1
-                if pos in [0, 1, 2]:
-                    relation_specific_unpruned_p3[relation_id] += 1
-                if pos in [0, 1, 2, 3, 4]:
-                    relation_specific_unpruned_p5[relation_id] += 1
-            except ValueError:
-                pass
+            # try:
+            #     pos = unpruned_predictions.index(obj_label)
+            #     if pos == 0:
+            #         flag = False
+            #         unpruned_top1 += 1
+            #         relation_specific_unpruned_p1[relation_id] += 1
+            #     if pos in [0, 1]:
+            #         relation_specific_unpruned_p2[relation_id] += 1
+            #     if pos in [0, 1, 2]:
+            #         relation_specific_unpruned_p3[relation_id] += 1
+            #     if pos in [0, 1, 2, 3, 4]:
+            #         relation_specific_unpruned_p5[relation_id] += 1
+            # except ValueError:
+            #     pass
             # if flag:
-               # comparison.append([{'masked_sentence': masked_sentences[0], 'relation': relation, 'output_pruned': pruned_predictions, 'output_fullscale': unpruned_predictions}])
+                # comparison.append([{'masked_sentence': masked_sentences[0], 'relation': relation, 'output_pruned': pruned_predictions, 'output_fullscale': unpruned_predictions}])
     # sparsity
     sparsity_dict = utils.sparsity(model, args.init_method)
 
@@ -638,7 +638,7 @@ def zero_shot_commonsenseQA_eval(model, tokenizer, device):
         print("{}|611".format(total-610))
     print("Acc: {}".format(cnt / real_total))
     return cnt / real_total
-
+        
 
 def zero_shot_csr(model, tokenizer, prompt, obj, candidates, device):
     """
@@ -735,7 +735,7 @@ def zero_shot_hellaswag_premise(model, tokenizer, premise, hypothesis, device):
             continue
         copyed_premise[i] = tokenizer.mask_token
         prompt = " ".join(copyed_premise)
-        complete_prompt = prompt + " " + hypothesis
+        complete_prompt = prompt + " " + hypothesis 
         input_dict = tokenizer(complete_prompt, return_tensors='pt')
         input_ids = input_dict['input_ids']
         mask_index = input_ids[0].tolist().index(tokenizer.mask_token_id)
@@ -810,11 +810,11 @@ def find_sub_list(sl,l):
     for ind in (i for i,e in enumerate(l) if e==sl[0]):
         if l[ind:ind+sll]==sl:
             results.append((ind,ind+sll-1))
-
+            
     return results
 
 def MAS(model, tokenizer, pronoun, candidate_a, candidate_b, sentence_a, sentence_b=None, layer=None, head=None):
-
+    
     """
     Computes the Maximum Attention Score (MAS) given a sentence, a pronoun and candidates for substitution.
     Parameters
@@ -839,52 +839,52 @@ def MAS(model, tokenizer, pronoun, candidate_a, candidate_b, sentence_a, sentenc
         If none, MAS will be compputer over all attention heads, otherwise only at specific head
     Returns
     -------
-
+    
     activity : list
         List of scores [score for candidate_a, score for candidate_b]
     """
-
+    
     inputs = tokenizer.encode_plus(sentence_a, sentence_b, return_tensors='pt', add_special_tokens=True)
     input_ids = inputs['input_ids']
     token_type_ids = inputs['token_type_ids']
-
+    
     candidate_a_ids = tokenizer.encode(candidate_a)[1:-1]
     candidate_b_ids = tokenizer.encode(candidate_b)[1:-1]
     pronoun_ids = tokenizer.encode(pronoun)[1:-1]
-
+    
     if next(model.parameters()).is_cuda:
         attention = model(input_ids.cuda(), token_type_ids=token_type_ids.cuda())[-1]
     else:
         attention = model(input_ids, token_type_ids=token_type_ids)[-1]
-
+        
     attn = format_attention(attention)
-
+    
     if next(model.parameters()).is_cuda:
         A = torch.zeros((attn.shape[0], attn.shape[1])).cuda()
         B = torch.zeros((attn.shape[0], attn.shape[1])).cuda()
     else:
         A = torch.zeros((attn.shape[0], attn.shape[1]))
         B = torch.zeros((attn.shape[0], attn.shape[1]))
-
+    
     if not layer is None:
         assert layer<attn.shape[0], "Maximum layer number "+str(attn.shape[0])+" exceeded"
         layer_slice = slice(layer,layer+1,1)
     else:
         layer_slice = slice(None,None,None)
-
+        
     if not head is None:
         assert head<attn.shape[1], "Maximum head number "+str(attn.shape[1])+" exceeded"
         head_slice = slice(head,head+1,1)
     else:
         head_slice = slice(None,None,None)
-
+    
     assert len(find_sub_list(pronoun_ids, input_ids[0].tolist())) > 0, "pronoun not found in sentence"
     assert len(find_sub_list(candidate_a_ids, input_ids[0].tolist())) > 0, "candidate_a not found in sentence"
     assert len(find_sub_list(candidate_b_ids, input_ids[0].tolist())) > 0, "candidate_b not found in sentence"
-
+    
     for _,src in enumerate(find_sub_list(pronoun_ids, input_ids[0].tolist())):
-
-
+    
+    
         for _, tar_a in enumerate(find_sub_list(candidate_a_ids, input_ids[0].tolist())):
             A=A+attn[layer_slice,head_slice, slice(tar_a[0],tar_a[1]+1,1), slice(src[0],src[0]+1,1)].mean(axis=2).mean(axis=2)
 
@@ -1017,13 +1017,7 @@ def link_prediction_conceptnet100k(model: SelfMaskingModel, tokenizer, device):
     print("unpruned mrr: {}".format(unpruned_mrr))
     print("pruned hits: {}, {}, {}, {}".format(pruned_p1, pruned_p2, pruned_p3, pruned_p10))
     print("pruned mrr: {}".format(pruned_mrr))
-    # if len(close_samples) > 0:
-    #     if len(close_samples) > 100:
-    #         import random
-    #         close_samples = random.sample(close_samples, 100)
-    #     with open('sampled_close_triples.json', 'w') as f:
-    #         json.dump(close_samples, f)
-    #     print("close samples saved!")
+
 
 
 def main(args):
@@ -1062,7 +1056,47 @@ def main(args):
             optimizer, args.warmup*max_steps, max_steps)
         optimizers.append(optimizer)
         schedulers.append(scheduler)
-
+    
+    if args.eval:
+        print("Evaluating pruned model: {}".format(args.model_name))
+        if args.csqa:
+            for relation in pl_model.relation_to_id:
+                _id = pl_model.relation_to_id[relation]
+                if 'mpnet' in args.model_name:
+                    mask_file_pth = "./masks/mpnet-base_{}_36_6_11_init>normal_hard.pickle".format(relation, 6*(args.tli-args.bli+1), args.bli, args.tli)
+                else:
+                    mask_file_pth = "./masks/{}_{}_{}_{}_{}_init>normal_hard.pickle".format(args.model_name, relation, 6*(args.tli-args.bli+1), args.bli, args.tli)
+                assert os.path.exists(mask_file_pth)
+                f = open(mask_file_pth, 'rb')
+                mask = torch.load(f)
+                pl_model.pruning_mask_generators[_id] = mask
+                f.close()
+            logger.info("Pruning mask loaded")
+            tokenizer = collator.tokenizer
+            model = pl_model.pretrained_language_model
+            acc = zero_shot_commonsenseQA_eval(model, tokenzier, device)
+            print("Accuracy on CommonsenseQA: {}".format(acc))
+        elif args.copa:
+            for relation in pl_model.relation_to_id:
+                _id = pl_model.relation_to_id[relation]
+                if 'mpnet' in args.model_name:
+                    mask_file_pth = "./masks/mpnet-base_{}_36_6_11_init>normal_hard.pickle".format(relation, 6*(args.tli-args.bli+1), args.bli, args.tli)
+                else:
+                    mask_file_pth = "./masks/{}_{}_{}_{}_{}_init>normal_hard.pickle".format(args.model_name, relation, 6*(args.tli-args.bli+1), args.bli, args.tli)
+                assert os.path.exists(mask_file_pth)
+                f = open(mask_file_pth, 'rb')
+                mask = torch.load(f)
+                pl_model.pruning_mask_generators[_id] = mask
+                f.close()
+            logger.info("Pruning mask loaded")
+            tokenizer = collator.tokenizer
+            model = pl_model.pretrained_language_model
+            acc = zero_shot_copa_eval(model, tokenizer, device)
+            print("Accuracy on COPA: {}".format(acc))
+        exit()
+    else:
+        print("Pruning and Probing model: {}".format(args.model_name))
+    
     # all_relations = set(pl_model.relation_to_id.keys())
     # all_relations.remove('NotDesires')
     # all_relations.remove('ReceivesAction')

@@ -22,8 +22,9 @@ Codebase for the paper "Exploring and Exploiting Latent Commonsense Knowledge in
 All above language models are based on WordPiece tokenization.
 
 
-## Install required packages
+## Prepare the codebase
 ```bash
+git clone https://github.com/DRSY/LAMP.git && cd LAMP
 pip install -r requirements.txt
 ```
 

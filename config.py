@@ -16,29 +16,21 @@ logging.basicConfig(level=logging.INFO,
 logger = logging.getLogger(__name__)
 
 conceptNet_path = "./data/ConceptNet/test.jsonl"
-place_of_birth_path = "./data/Google_RE/place_of_birth_test.jsonl"
-place_of_death_path = "./data/Google_RE/place_of_death_test.jsonl"
 
 conceptnet_ckbc_path = "./data/CKBC"
 
 # allowed models
-MODEL_NAMES = ['microsoft/mpnet-base', 'bert-base-cased', 'bert-base-uncased', 'distilbert-base-cased', 'distilbert-base-uncased', 'distilroberta-base', 'funnel-transformer/large-base', 'funnel-transformer/medium-base', 'bert-base-cased-finetuned-mrpc', 'SpanBERT/spanbert-base-cased', 'SpanBERT/spanbert-large-cased', 'phiyodr/bert-base-finetuned-squad2', 'nreimers/TinyBERT_L-4_H-312_v2',
-               'bert-large-uncased', 'bert-large-cased', 'roberta-base', 'roberta-large', 'albert-base-v2', 'albert-large-v2', 'albert-xlarge-v2', 'albert-xxlarge-v2', 'dbmdz/bert-base-cased-finetuned-conll03-english']
+MODEL_NAMES = ['microsoft/mpnet-base', 'bert-base-cased', 'bert-base-uncased', 'distilbert-base-cased', 'distilbert-base-uncased', 'bert-base-cased-finetuned-mrpc', 'phiyodr/bert-base-finetuned-squad2',
+               'bert-large-uncased', 'bert-large-cased', 'dbmdz/bert-base-cased-finetuned-conll03-english']
 
 # layers
 TRANSFORMER_LAYERS = {
-    'funnel-transformer/medium-base': 12,
-    'funnel-transformer/large-base': 24,
     'bert-base-uncased': 12,
     'bert-base-cased': 12,
-    'SpanBERT/spanbert-base-cased': 12,
-    'SpanBERT/spanbert-large-cased': 24,
     'bert-large-uncased': 24,
     'bert-large-cased': 24,
     'distilbert-base-uncased': 6,
     'distilbert-base-cased': 6,
-    'roberta-base': 12,
-    'roberta-large': 24,
     'microsoft/mpnet-base': 12
 }
 

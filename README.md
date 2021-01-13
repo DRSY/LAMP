@@ -17,9 +17,8 @@ Codebase for the paper "Exploring and Exploiting Latent Commonsense Knowledge in
 ## Current supported models:
 - DistilBERT-base
 - BERT(base, large, etc.)
+- RoBERTa(base, large, etc.)
 - MPNet
-
-All above language models are based on WordPiece tokenization.
 
 
 ## Prepare the codebase
